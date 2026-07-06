@@ -1,0 +1,18 @@
+#!/bin/bash
+
+echo "=========================================="
+echo "Data Agent 重构项目创建完成！"
+echo "=========================================="
+echo ""
+echo "项目结构："
+echo "- backend/  - FastAPI 后端"
+echo "- frontend/ - React 前端"
+echo ""
+echo "下一步："
+echo "1. 配置数据库"
+echo "2. 启动后端服务"
+echo "3. 启动前端服务"
+echo ""
+echo "详细说明请查看 data_agent_refactored/README.md"
+echo ""
+echo "祝你使用愉快！"
