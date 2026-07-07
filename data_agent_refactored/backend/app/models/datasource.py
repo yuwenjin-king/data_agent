@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, JSON, BigInteger
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, BigInteger
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -14,7 +14,7 @@ class Datasource(Base):
     port = Column(Integer, nullable=False, comment="端口号")
     database_name = Column(String(255), nullable=False, comment="数据库名称")
     username = Column(String(255), nullable=False, comment="用户名")
-    password = Column(String(255), nullable=False, comment="密码（加密存储）")
+    password = Column(String(500), nullable=False, comment="密码（加密存储）")
     connection_url = Column(String(1000), comment="完整连接URL")
     status = Column(String(50), default="inactive", comment="状态：active-启用，inactive-禁用")
     test_status = Column(String(50), default="unknown", comment="连接测试状态")
@@ -33,7 +33,7 @@ class AgentDatasource(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     agent_id = Column(Integer, ForeignKey("agent.id", ondelete="CASCADE"), nullable=False, comment="智能体ID")
     datasource_id = Column(Integer, ForeignKey("datasource.id", ondelete="CASCADE"), nullable=False, comment="数据源ID")
-    is_active = Column(Boolean, default=False, comment="是否启用")
+    is_active = Column(Integer, default=0, comment="是否启用：0-禁用，1-启用")
     create_time = Column(DateTime, server_default=func.now(), comment="创建时间")
     update_time = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     
@@ -65,7 +65,7 @@ class LogicalRelation(Base):
     target_column_name = Column(String(100), nullable=False, comment="关联表字段名")
     relation_type = Column(String(20), comment="关系类型: 1:1, 1:N, N:1")
     description = Column(String(500), comment="业务描述")
-    is_deleted = Column(Boolean, default=False, comment="逻辑删除")
+    is_deleted = Column(Integer, default=0, comment="逻辑删除：0-未删除，1-已删除")
     created_time = Column(DateTime, server_default=func.now(), comment="创建时间")
     updated_time = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     

@@ -23,7 +23,7 @@ class ChatSession(Base):
 class ChatMessage(Base):
     __tablename__ = "chat_message"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
     session_id = Column(String(36), ForeignKey("chat_session.id", ondelete="CASCADE"), nullable=False, comment="会话ID")
     role = Column(String(20), nullable=False, comment="角色：user-用户，assistant-助手，system-系统")
     content = Column(Text, nullable=False, comment="消息内容")

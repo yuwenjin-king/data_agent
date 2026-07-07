@@ -1,11 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-from app.schemas.agent import AgentCreate, AgentUpdate, AgentResponse, BusinessKnowledgeCreate, BusinessKnowledgeResponse
+from app.schemas.agent import (
+    AgentCreate, AgentUpdate, AgentResponse,
+    BusinessKnowledgeCreate, BusinessKnowledgeResponse, ApiKeyResponse
+)
 from app.schemas.common import ApiResponse, PageResponse, PageRequest
+from app.schemas.datasource import InitSchemaRequest
 from app.services.agent_service import agent_crud, business_knowledge_crud
+from app.services.datasource_service import agent_datasource_crud
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -61,6 +66,86 @@ def delete_agent(agent_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Agent not found")
     agent_crud.remove(db, id=agent_id)
     return ApiResponse(message="Agent deleted successfully")
+
+
+@router.post("/{agent_id}/publish", response_model=ApiResponse[AgentResponse])
+def publish_agent(agent_id: int, db: Session = Depends(get_db)):
+    agent = agent_crud.publish(db, agent_id=agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return ApiResponse(data=AgentResponse.model_validate(agent))
+
+
+@router.post("/{agent_id}/offline", response_model=ApiResponse[AgentResponse])
+def offline_agent(agent_id: int, db: Session = Depends(get_db)):
+    agent = agent_crud.offline(db, agent_id=agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return ApiResponse(data=AgentResponse.model_validate(agent))
+
+
+@router.get("/{agent_id}/api-key", response_model=ApiResponse[ApiKeyResponse])
+def get_api_key(agent_id: int, db: Session = Depends(get_db)):
+    masked_key, enabled = agent_crud.get_api_key_masked(db, agent_id=agent_id)
+    if masked_key is None and enabled is None:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return ApiResponse(data=ApiKeyResponse(masked_key=masked_key, api_key_enabled=enabled))
+
+
+@router.post("/{agent_id}/api-key/generate", response_model=ApiResponse[ApiKeyResponse])
+def generate_api_key(agent_id: int, db: Session = Depends(get_db)):
+    agent, raw_key = agent_crud.generate_api_key(db, agent_id=agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return ApiResponse(data=ApiKeyResponse(api_key=raw_key, api_key_enabled=1))
+
+
+@router.post("/{agent_id}/api-key/reset", response_model=ApiResponse[ApiKeyResponse])
+def reset_api_key(agent_id: int, db: Session = Depends(get_db)):
+    agent, raw_key = agent_crud.generate_api_key(db, agent_id=agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return ApiResponse(data=ApiKeyResponse(api_key=raw_key, api_key_enabled=1))
+
+
+@router.delete("/{agent_id}/api-key", response_model=ApiResponse)
+def delete_api_key(agent_id: int, db: Session = Depends(get_db)):
+    agent = agent_crud.delete_api_key(db, agent_id=agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return ApiResponse(message="API key deleted successfully")
+
+
+@router.post("/{agent_id}/api-key/enable", response_model=ApiResponse[ApiKeyResponse])
+def set_api_key_enabled(
+    agent_id: int,
+    enabled: bool = Query(..., description="true to enable, false to disable"),
+    db: Session = Depends(get_db)
+):
+    agent = agent_crud.set_api_key_enabled(db, agent_id=agent_id, enabled=1 if enabled else 0)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    masked_key, _ = agent_crud.get_api_key_masked(db, agent_id=agent_id)
+    return ApiResponse(
+        data=ApiKeyResponse(masked_key=masked_key, api_key_enabled=agent.api_key_enabled)
+    )
+
+
+@router.post("/{agent_id}/datasources/init-schema", response_model=ApiResponse[List[str]])
+def init_agent_schema(
+    agent_id: int,
+    request: InitSchemaRequest,
+    db: Session = Depends(get_db)
+):
+    agent = agent_crud.get(db, id=agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    link = agent_datasource_crud.init_schema(
+        db, agent_id=agent_id, table_names=request.table_names
+    )
+    if not link:
+        raise HTTPException(status_code=404, detail="No datasource linked to this agent")
+    return ApiResponse(data=request.table_names)
 
 
 @router.post("/{agent_id}/business-knowledge", response_model=ApiResponse[BusinessKnowledgeResponse])

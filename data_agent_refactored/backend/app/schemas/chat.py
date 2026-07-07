@@ -38,7 +38,7 @@ class ChatMessageBase(BaseModel):
     message_type: Optional[str] = "text"
     metadata: Optional[Dict[str, Any]] = Field(
         default=None,
-        validation_alias=AliasChoices("metadata", "metadata_"),
+        validation_alias=AliasChoices("metadata_", "metadata"),
         serialization_alias="metadata",
     )
 

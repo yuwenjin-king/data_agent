@@ -124,3 +124,10 @@
 - 前端明显构建错误修复。
 - 前后端流式请求方式初步对齐。
 - 增加最小后端测试。
+
+## P1 当前进展
+
+- 已增加 Alembic 配置和 `0001_initial_baseline` 基线迁移。
+- 已新增 `docs/schema-compatibility.md`，记录原 Java entity 与 Python model 的兼容性状态。
+- 已统一 `HTTPException` 和请求校验错误的 `ApiResponse` 响应格式。
+- 已增加 SQLite 隔离 API 契约测试，覆盖 Agent、Datasource、Knowledge、Chat 和错误响应。

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 from typing import Optional, List
 from datetime import datetime
 
@@ -29,20 +29,43 @@ class DatasourceUpdate(DatasourceBase):
     password: Optional[str] = None
 
 
-class DatasourceResponse(DatasourceBase):
+class DatasourceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    name: str
+    type: str
+    host: str
+    port: int
+    database_name: str
+    username: str
+    connection_url: Optional[str] = None
+    description: Optional[str] = None
     status: str
     test_status: str
     create_time: datetime
     update_time: datetime
 
 
+class DatasourceTypeResponse(BaseModel):
+    type: str
+    name: str
+    description: Optional[str] = None
+
+
+class DatasourceTestResponse(BaseModel):
+    success: bool
+    message: str
+
+
+class InitSchemaRequest(BaseModel):
+    table_names: List[str]
+
+
 class AgentDatasourceBase(BaseModel):
     agent_id: int
     datasource_id: int
-    is_active: Optional[bool] = False
+    is_active: Optional[int] = 0
 
 
 class AgentDatasourceCreate(AgentDatasourceBase):
@@ -75,6 +98,6 @@ class LogicalRelationResponse(LogicalRelationBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    is_deleted: bool
+    is_deleted: int
     created_time: datetime
     updated_time: datetime

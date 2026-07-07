@@ -6,7 +6,8 @@ from app.core.database import get_db
 from app.schemas.datasource import (
     DatasourceCreate, DatasourceUpdate, DatasourceResponse,
     AgentDatasourceCreate, AgentDatasourceResponse,
-    LogicalRelationCreate, LogicalRelationResponse
+    LogicalRelationCreate, LogicalRelationResponse,
+    DatasourceTypeResponse, DatasourceTestResponse
 )
 from app.schemas.common import ApiResponse
 from app.services.datasource_service import datasource_crud, agent_datasource_crud, logical_relation_crud
@@ -18,6 +19,12 @@ router = APIRouter(prefix="/datasources", tags=["datasources"])
 def create_datasource(datasource_in: DatasourceCreate, db: Session = Depends(get_db)):
     datasource = datasource_crud.create(db, obj_in=datasource_in)
     return ApiResponse(data=DatasourceResponse.model_validate(datasource))
+
+
+@router.get("/types", response_model=ApiResponse[List[DatasourceTypeResponse]])
+def list_datasource_types(db: Session = Depends(get_db)):
+    types = datasource_crud.get_supported_types()
+    return ApiResponse(data=[DatasourceTypeResponse(**t) for t in types])
 
 
 @router.get("/{datasource_id}", response_model=ApiResponse[DatasourceResponse])
@@ -50,6 +57,43 @@ def delete_datasource(datasource_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Datasource not found")
     datasource_crud.remove(db, id=datasource_id)
     return ApiResponse(message="Datasource deleted successfully")
+
+
+@router.post("/{datasource_id}/test", response_model=ApiResponse[DatasourceTestResponse])
+def test_datasource_connection(datasource_id: int, db: Session = Depends(get_db)):
+    datasource = datasource_crud.get(db, id=datasource_id)
+    if not datasource:
+        raise HTTPException(status_code=404, detail="Datasource not found")
+    result = datasource_crud.test_connection(db, datasource_id=datasource_id)
+    return ApiResponse(data=result)
+
+
+@router.get("/{datasource_id}/tables", response_model=ApiResponse[List[str]])
+def list_datasource_tables(datasource_id: int, db: Session = Depends(get_db)):
+    datasource = datasource_crud.get(db, id=datasource_id)
+    if not datasource:
+        raise HTTPException(status_code=404, detail="Datasource not found")
+    try:
+        tables = datasource_crud.list_tables(db, datasource_id=datasource_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return ApiResponse(data=tables)
+
+
+@router.get("/{datasource_id}/tables/{table_name}/columns", response_model=ApiResponse[List[str]])
+def list_datasource_columns(datasource_id: int, table_name: str, db: Session = Depends(get_db)):
+    datasource = datasource_crud.get(db, id=datasource_id)
+    if not datasource:
+        raise HTTPException(status_code=404, detail="Datasource not found")
+    try:
+        columns = datasource_crud.list_columns(db, datasource_id=datasource_id, table_name=table_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return ApiResponse(data=columns)
 
 
 @router.post("/agent-datasources", response_model=ApiResponse[AgentDatasourceResponse])

@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.api.v1 import api_router
+from app.schemas.common import ApiResponse
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -20,6 +23,22 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ApiResponse(code=exc.status_code, message=str(exc.detail)).model_dump(),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content=ApiResponse(code=422, message="validation error", data=exc.errors()).model_dump(),
+    )
 
 
 @app.get("/")

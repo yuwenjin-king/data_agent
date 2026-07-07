@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, JSON, BigInteger
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, BigInteger
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -13,7 +13,7 @@ class Agent(Base):
     avatar = Column(Text, comment="头像URL")
     status = Column(String(50), default="draft", comment="状态：draft-待发布，published-已发布，offline-已下线")
     api_key = Column(String(255), comment="访问 API Key，格式 sk-xxx")
-    api_key_enabled = Column(Boolean, default=False, comment="API Key 是否启用")
+    api_key_enabled = Column(Integer, default=0, comment="API Key 是否启用：0-禁用，1-启用")
     prompt = Column(Text, comment="自定义Prompt配置")
     category = Column(String(100), comment="分类")
     admin_id = Column(BigInteger, comment="管理员ID")

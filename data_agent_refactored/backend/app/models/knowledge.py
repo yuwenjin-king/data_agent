@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, JSON, BigInteger
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, BigInteger
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -17,7 +17,7 @@ class SemanticModel(Base):
     business_description = Column(Text, comment="业务描述")
     column_comment = Column(String(255), comment="数据库中的物理字段的原始注释")
     data_type = Column(String(255), nullable=False, default="", comment="物理数据类型")
-    status = Column(Boolean, default=True, comment="0 停用 1 启用")
+    status = Column(Integer, default=1, comment="0-停用，1-启用")
     created_time = Column(DateTime, server_default=func.now(), comment="创建时间")
     updated_time = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     
@@ -56,7 +56,7 @@ class AgentPresetQuestion(Base):
     agent_id = Column(Integer, ForeignKey("agent.id", ondelete="CASCADE"), nullable=False, comment="智能体ID")
     question = Column(Text, nullable=False, comment="预设问题内容")
     sort_order = Column(Integer, default=0, comment="排序顺序")
-    is_active = Column(Boolean, default=False, comment="是否启用")
+    is_active = Column(Integer, default=0, comment="是否启用：0-禁用，1-启用")
     create_time = Column(DateTime, server_default=func.now(), comment="创建时间")
     update_time = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     

@@ -22,7 +22,10 @@ class Settings(BaseSettings):
     # File Upload
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
-    
+
+    # Encryption
+    CRYPTO_KEY: str = ""  # base64 Fernet key; empty uses dev fallback
+
     # Code Execution
     CODE_EXECUTOR_TYPE: str = "local"  # local or docker
     DOCKER_IMAGE: str = "python:3.11-slim"

@@ -76,7 +76,20 @@ data_agent_refactored/
 
 ### 1. 数据库准备
 
-首先确保你有一个可用的数据库，并使用原项目的数据库 schema。
+首先确保你有一个可用的数据库。重构版使用 Alembic 管理 schema：
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+如果连接的是已经存在的原 DataAgent 数据库，请先查看
+[schema 兼容性文档](./docs/schema-compatibility.md)，确认字段和类型差异后再执行：
+
+```bash
+cd backend
+alembic stamp head
+```
 
 ### 2. 后端启动
 
@@ -152,11 +165,11 @@ npm run dev
 
 ## 数据库
 
-数据库 schema 与原项目保持完全兼容，支持：
+数据库 schema 正在与原项目对齐，当前支持：
 - MySQL
 - PostgreSQL
 
-确保数据库中已有的数据可以直接迁移使用。
+兼容性状态见 [docs/schema-compatibility.md](./docs/schema-compatibility.md)。在完成逐表验证前，不建议直接声明已有数据可以无改动迁移使用。
 
 ---
 

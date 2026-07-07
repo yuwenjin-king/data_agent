@@ -19,4 +19,5 @@ pytest==7.4.4
 pytest-asyncio==0.23.3
 pytest-cov==4.1.0
 alembic==1.13.1
+openpyxl==3.1.2
 websockets==12.0

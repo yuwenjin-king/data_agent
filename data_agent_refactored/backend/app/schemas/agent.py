@@ -9,7 +9,7 @@ class AgentBase(BaseModel):
     avatar: Optional[str] = Field(None, description="头像URL")
     status: Optional[str] = Field("draft", description="状态")
     api_key: Optional[str] = Field(None, description="API Key")
-    api_key_enabled: Optional[bool] = Field(False, description="API Key是否启用")
+    api_key_enabled: Optional[int] = Field(0, description="API Key是否启用：0-禁用，1-启用")
     prompt: Optional[str] = Field(None, description="自定义Prompt配置")
     category: Optional[str] = Field(None, description="分类")
     tags: Optional[str] = Field(None, description="标签，逗号分隔")
@@ -27,8 +27,15 @@ class AgentResponse(AgentBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    api_key: Optional[str] = None  # response never exposes the real key
     create_time: datetime
     update_time: datetime
+
+
+class ApiKeyResponse(BaseModel):
+    api_key: Optional[str] = Field(None, description="原始 API Key，仅在生成/重置时返回一次")
+    api_key_enabled: int = Field(0, description="API Key 是否启用：0-禁用，1-启用")
+    masked_key: Optional[str] = Field(None, description="掩码后的 API Key")
 
 
 class BusinessKnowledgeBase(BaseModel):
