@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from typing import List
-from fastapi.responses import StreamingResponse
 
 from app.core.database import get_db
+from app.models.chat import ChatMessage
 from app.schemas.chat import (
     ChatSessionCreate, ChatSessionUpdate, ChatSessionResponse,
     ChatMessageCreate, ChatMessageResponse,
@@ -16,6 +18,7 @@ from app.services.chat_service import (
     chat_session_crud, chat_message_crud,
     user_prompt_config_crud, model_config_crud
 )
+from app.services.workflow_service import run_chat_workflow
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -64,31 +67,61 @@ def list_messages(session_id: str, skip: int = 0, limit: int = 100, db: Session 
 @router.post("/completions")
 async def chat_completion(request: ChatRequest, db: Session = Depends(get_db)):
     session_id = request.session_id
-    if not session_id:
-        session = chat_session_crud.create(db, obj_in=ChatSessionCreate(
+
+    async def event_stream():
+        async for event in run_chat_workflow(
+            db=db,
             agent_id=request.agent_id,
-            title=request.message[:50] if len(request.message) > 50 else request.message
-        ))
-        session_id = session.id
-    
-    user_message = chat_message_crud.create(db, obj_in=ChatMessageCreate(
-        session_id=session_id,
-        role="user",
-        content=request.message
-    ))
-    
-    async def generate():
-        yield f"data: {session_id}\n\n"
-        yield f"data: Processing your request...\n\n"
-        yield f"data: [DONE]\n\n"
-    
+            user_message=request.message,
+            session_id=session_id,
+        ):
+            yield event
+
     if request.stream:
-        return StreamingResponse(generate(), media_type="text/event-stream")
-    else:
-        return ApiResponse(data=ChatResponse(
-            content="This is a placeholder response. Please implement the actual logic.",
-            session_id=session_id
-        ))
+        return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+    # Non-streaming: collect all events and return the final result.
+    final_content = ""
+    final_session_id = session_id
+    final_sql = None
+    final_execution_result = None
+    async for event in event_stream():
+        if event.startswith("event: session"):
+            # Extract session id from data line.
+            data = event.split("\ndata: ", 1)[1].split("\n\n")[0]
+            import json
+            payload = json.loads(data)
+            final_session_id = payload.get("session_id", final_session_id)
+        elif event.startswith("event: sql\n"):
+            data = event.split("\ndata: ", 1)[1].split("\n\n")[0]
+            import json
+            final_sql = json.loads(data).get("sql")
+        elif event.startswith("event: sql_result\n"):
+            data = event.split("\ndata: ", 1)[1].split("\n\n")[0]
+            import json
+            final_execution_result = json.loads(data).get("result")
+        elif event.startswith("event: node_complete"):
+            pass
+        elif event.startswith("event: done"):
+            pass
+
+    # For non-streaming, the final assistant content is persisted as a message.
+    # Load it from the session to populate content accurately.
+    message = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.session_id == final_session_id, ChatMessage.role == "assistant")
+        .order_by(desc(ChatMessage.id))
+        .first()
+    )
+    if message:
+        final_content = message.content
+
+    return ApiResponse(data=ChatResponse(
+        content=final_content,
+        session_id=final_session_id,
+        sql_query=final_sql,
+        execution_result=final_execution_result,
+    ))
 
 
 @router.post("/prompt-configs", response_model=ApiResponse[UserPromptConfigResponse])

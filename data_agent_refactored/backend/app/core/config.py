@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     # Code Execution
     CODE_EXECUTOR_TYPE: str = "local"  # local or docker
     DOCKER_IMAGE: str = "python:3.11-slim"
-    
+
+    # Workflow / LLM execution
+    SQL_EXEC_TIMEOUT: int = 30  # seconds
+    MAX_SQL_ROWS: int = 500
+    MULTI_TURN_MAX_TURNS: int = 10
+
+    # Vector store (memory | chroma | elasticsearch)
+    VECTOR_STORE_TYPE: str = "memory"
+
 
 settings = Settings()

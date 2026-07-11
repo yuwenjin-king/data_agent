@@ -1,3 +1,4 @@
+import asyncio
 import io
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
@@ -17,6 +18,10 @@ from app.schemas.knowledge import (
 from app.schemas.common import ApiResponse, PageResponse
 from app.services.knowledge_service import (
     semantic_model_crud, agent_knowledge_crud, agent_preset_question_crud
+)
+from app.workflow.indexing import (
+    delete_agent_knowledge_index,
+    index_agent_knowledge,
 )
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
@@ -167,6 +172,7 @@ def create_agent_knowledge_json(
     db: Session = Depends(get_db)
 ):
     knowledge = agent_knowledge_crud.create(db, obj_in=knowledge_in)
+    asyncio.run(index_agent_knowledge(knowledge))
     return ApiResponse(data=AgentKnowledgeResponse.model_validate(knowledge))
 
 
@@ -196,6 +202,7 @@ def create_agent_knowledge_multipart(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    asyncio.run(index_agent_knowledge(knowledge))
     return ApiResponse(data=AgentKnowledgeResponse.model_validate(knowledge))
 
 
@@ -228,6 +235,7 @@ def delete_agent_knowledge(knowledge_id: int, db: Session = Depends(get_db)):
     knowledge = agent_knowledge_crud.delete_soft(db, id=knowledge_id)
     if not knowledge:
         raise HTTPException(status_code=404, detail="Knowledge not found")
+    delete_agent_knowledge_index(knowledge_id)
     return ApiResponse(message="Knowledge deleted successfully")
 
 
@@ -254,6 +262,7 @@ def retry_agent_knowledge_embedding(knowledge_id: int, db: Session = Depends(get
         raise HTTPException(status_code=400, detail=str(exc))
     if not knowledge:
         raise HTTPException(status_code=404, detail="Knowledge not found")
+    asyncio.run(index_agent_knowledge(knowledge))
     return ApiResponse(data=AgentKnowledgeResponse.model_validate(knowledge))
 
 

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
+import asyncio
 
 from app.core.database import get_db
 from app.schemas.agent import (
@@ -10,7 +11,9 @@ from app.schemas.agent import (
 from app.schemas.common import ApiResponse, PageResponse, PageRequest
 from app.schemas.datasource import InitSchemaRequest
 from app.services.agent_service import agent_crud, business_knowledge_crud
-from app.services.datasource_service import agent_datasource_crud
+from app.services.datasource_service import agent_datasource_crud, datasource_crud
+from app.workflow.indexing import index_business_knowledge, index_schema_documents
+from app.workflow.sql.utils import get_datasource_url_and_dialect
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -145,6 +148,17 @@ def init_agent_schema(
     )
     if not link:
         raise HTTPException(status_code=404, detail="No datasource linked to this agent")
+
+    url, _ = get_datasource_url_and_dialect(db, link)
+    if url:
+        asyncio.run(index_schema_documents(
+            db=db,
+            datasource_id=link.datasource_id,
+            url=url,
+            agent_id=agent_id,
+            table_names=request.table_names,
+        ))
+
     return ApiResponse(data=request.table_names)
 
 
@@ -159,6 +173,7 @@ def create_business_knowledge(
         raise HTTPException(status_code=404, detail="Agent not found")
     knowledge_in.agent_id = agent_id
     knowledge = business_knowledge_crud.create(db, obj_in=knowledge_in)
+    asyncio.run(index_business_knowledge(knowledge))
     return ApiResponse(data=BusinessKnowledgeResponse.model_validate(knowledge))
 
 

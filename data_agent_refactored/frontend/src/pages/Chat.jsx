@@ -118,35 +118,61 @@ function Chat() {
     setInputMessage('')
     setLoading(true)
 
+    const assistantMessage = {
+      id: Date.now() + 1,
+      session_id: currentSession.id,
+      role: 'assistant',
+      content: '',
+      message_type: 'text',
+      create_time: new Date().toISOString(),
+    }
+    setMessages(prev => [...prev, assistantMessage])
+
     try {
-      const res = await chatService.sendMessage({
-        agent_id: parseInt(agentId),
-        session_id: currentSession.id,
-        message: inputMessage,
-        stream: false,
-      })
-
-      const assistantMessage = {
-        id: Date.now() + 1,
-        session_id: currentSession.id,
-        role: 'assistant',
-        content: res.data.data?.content || '收到您的消息，正在处理中...',
-        message_type: 'text',
-        create_time: new Date().toISOString(),
-      }
-
-      setMessages(prev => [...prev, assistantMessage])
+      let sessionId = currentSession.id
+      await chatService.streamMessage(
+        {
+          agent_id: parseInt(agentId),
+          session_id: sessionId,
+          message: inputMessage,
+        },
+        (event) => {
+          if (event.event === 'session' && event.data.session_id) {
+            sessionId = event.data.session_id
+            if (sessionId !== currentSession.id) {
+              setCurrentSession(prev => ({ ...prev, id: sessionId }))
+            }
+          }
+          if (event.event === 'message' && typeof event.data.text === 'string') {
+            setMessages(prev =>
+              prev.map((msg, idx) =>
+                idx === prev.length - 1 && msg.role === 'assistant'
+                  ? { ...msg, content: event.data.text }
+                  : msg
+              )
+            )
+          }
+          if (event.event === 'sql' && event.data.sql) {
+            const sqlBlock = `\n\n**生成 SQL：**\n\`\`\`sql\n${event.data.sql}\n\`\`\``
+            setMessages(prev =>
+              prev.map((msg, idx) =>
+                idx === prev.length - 1 && msg.role === 'assistant'
+                  ? { ...msg, content: msg.content + sqlBlock }
+                  : msg
+              )
+            )
+          }
+        }
+      )
     } catch (error) {
       console.error('Failed to send message:', error)
-      const errorMessage = {
-        id: Date.now() + 1,
-        session_id: currentSession.id,
-        role: 'assistant',
-        content: '抱歉，发生了错误，请稍后重试。',
-        message_type: 'error',
-        create_time: new Date().toISOString(),
-      }
-      setMessages(prev => [...prev, errorMessage])
+      setMessages(prev =>
+        prev.map((msg, idx) =>
+          idx === prev.length - 1 && msg.role === 'assistant'
+            ? { ...msg, content: '抱歉，发生了错误，请稍后重试。' }
+            : msg
+        )
+      )
     } finally {
       setLoading(false)
     }

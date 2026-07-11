@@ -38,7 +38,7 @@ export const chatService = {
   updateSession: (sessionId, data) => api.put(`/chat/sessions/${sessionId}`, data),
   getMessages: (sessionId) => api.get(`/chat/messages/session/${sessionId}`),
   sendMessage: (data) => api.post('/chat/completions', data),
-  streamMessage: async (data, onChunk) => {
+  streamMessage: async (data, onEvent) => {
     const response = await fetch('/api/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -50,12 +50,33 @@ export const chatService = {
     }
 
     const reader = response.body.getReader()
-    const decoder = new TextDecoder()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
 
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-      onChunk?.(decoder.decode(value, { stream: true }))
+      buffer += decoder.decode(value, { stream: true })
+      const parts = buffer.split('\n\n')
+      buffer = parts.pop() || ''
+      for (const part of parts) {
+        const lines = part.split('\n')
+        let event = 'message'
+        let data = {}
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            event = line.slice('event: '.length)
+          } else if (line.startsWith('data: ')) {
+            const payload = line.slice('data: '.length)
+            try {
+              data = JSON.parse(payload)
+            } catch {
+              data = { raw: payload }
+            }
+          }
+        }
+        onEvent?.({ event, data })
+      }
     }
 
     return response
