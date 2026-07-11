@@ -12,7 +12,7 @@ import {
   message,
   Popconfirm,
 } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, ChatOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, MessageOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { agentService } from '../services'
 
@@ -121,7 +121,7 @@ function Agents() {
         <Space>
           <Button
             type="link"
-            icon={<ChatOutlined />}
+            icon={<MessageOutlined />}
             onClick={() => navigate(`/chat/${record.id}`)}
           >
             聊天
