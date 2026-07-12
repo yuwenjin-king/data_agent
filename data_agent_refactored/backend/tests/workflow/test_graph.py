@@ -114,7 +114,17 @@ async def test_nl2sql_graph_with_sqlite_agent_db(db_session):
 
     responses = {
         "意图分类": '{"classification": "data_analysis"}',
-        "规范化查询": '{"canonical_query": "查询 users 表中的用户数量", "expanded_queries": []}',
+        "查询澄清与规范化": '{"canonical_query": "查询 users 表中的用户数量", "expanded_queries": []}',
+        "需求可行性": (
+            "【需求类型】：《数据分析》\n【语种类型】：《中文》\n"
+            "【需求内容】：查询 users 表中的用户数量"
+        ),
+        "执行计划编排": (
+            '{"thought_process":"单步取数","execution_plan":['
+            '{"step":1,"tool_to_use":"sql_generate",'
+            '"tool_parameters":{"instruction":"查询 users 表中的用户数量"}}]}'
+        ),
+        "语义一致性校验": "通过",
         "SQL 编写约束": "SELECT COUNT(*) AS cnt FROM users",
         "报告结构建议": "共有 2 位用户。",
     }

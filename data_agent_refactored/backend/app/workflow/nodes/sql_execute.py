@@ -84,7 +84,13 @@ async def sql_execute_node(
     if display_style:
         execution_output["display_style"] = display_style
 
+    # Append (multi-step plans accumulate results) and advance the plan cursor.
+    # Reset sql_generate_count so the next plan step starts with a fresh budget.
+    memory = list(state.get("sql_result_list_memory") or [])
+    memory.append(execution_output)
     return {
         "sql_execute_node_output": execution_output,
-        "sql_result_list_memory": [execution_output],
+        "sql_result_list_memory": memory,
+        "plan_current_step": state.get("plan_current_step", 1) + 1,
+        "sql_generate_count": 0,
     }

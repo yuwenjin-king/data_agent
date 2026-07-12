@@ -3,6 +3,7 @@ from typing import Optional
 from langchain_core.runnables import RunnableConfig
 
 from app.workflow.llm.client import LLMClient
+from app.workflow.plan_utils import get_current_step_instruction
 from app.workflow.prompts.loader import PromptLoader
 from app.workflow.sql.schema_builder import format_schema_for_prompt
 from app.workflow.state import SqlRetryReason, WorkflowState
@@ -31,6 +32,9 @@ async def sql_generate_node(
     schema = state.get("table_relation_output")
     evidence = state.get("evidence", "")
     query = state.get("query_enhance_node_output", {}).canonical_query if state.get("query_enhance_node_output") else state.get("input", "")
+    # The step instruction drives SQL generation; fall back to the canonical query
+    # when the planner didn't provide one (e.g. nl2sql-only / no-LLM fallback).
+    execution_description = get_current_step_instruction(state) or query
     dialect = state.get("db_dialect_type", "mysql")
     sql_generate_count = state.get("sql_generate_count", 0)
     retry_reason = state.get("sql_regenerate_reason") or SqlRetryReason()
@@ -53,7 +57,7 @@ async def sql_generate_node(
             dialect=dialect,
             error_message=retry_reason.reason,
             schema_info=full_schema,
-            execution_description=query,
+            execution_description=execution_description,
             error_sql=previous_sql,
             question=state.get("input", ""),
             evidence=evidence,
@@ -65,7 +69,7 @@ async def sql_generate_node(
             schema_info=full_schema,
             evidence=evidence,
             question=state.get("input", ""),
-            execution_description=query,
+            execution_description=execution_description,
         )
 
     try:

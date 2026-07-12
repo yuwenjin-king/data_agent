@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict, List, Optional, TypedDict
 from pydantic import BaseModel, Field
 
@@ -53,6 +54,52 @@ class SqlRetryReason(BaseModel):
     kind: str = "none"  # none | sql_execute | semantic
     reason: str = ""
 
+    @staticmethod
+    def semantic(reason: str) -> "SqlRetryReason":
+        return SqlRetryReason(kind="semantic", reason=reason)
+
+    @staticmethod
+    def sql_execute(reason: str) -> "SqlRetryReason":
+        return SqlRetryReason(kind="sql_execute", reason=reason)
+
+
+class ToolParameters(BaseModel):
+    instruction: Optional[str] = None
+    summary_and_recommendations: Optional[str] = None
+    sql_query: Optional[str] = None  # runtime-filled by sql_execute, never set by planner
+
+
+class ExecutionStep(BaseModel):
+    step: int
+    tool_to_use: str  # sql_generate | python_generate | report_generator
+    tool_parameters: ToolParameters = Field(default_factory=ToolParameters)
+
+
+class Plan(BaseModel):
+    thought_process: str = ""
+    execution_plan: List[ExecutionStep] = Field(default_factory=list)
+
+    @staticmethod
+    def nl2sql_only_json() -> str:
+        """Single-step SQL plan used for nl2sql-only mode and the no-LLM fallback.
+
+        The instruction is intentionally empty so sql_generate falls back to the
+        canonical query.
+        """
+        return json.dumps(
+            {
+                "thought_process": "nl2sql-only",
+                "execution_plan": [
+                    {
+                        "step": 1,
+                        "tool_to_use": "sql_generate",
+                        "tool_parameters": {"instruction": ""},
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        )
+
 
 class WorkflowEvent(BaseModel):
     event: str
@@ -91,6 +138,15 @@ class WorkflowState(TypedDict, total=False):
     planner_node_output: str  # JSON string of Plan
     plan_current_step: int
     plan_next_node: str
+    plan_validation_status: bool
+    plan_validation_error: str
+    plan_repair_count: int
+
+    # feasibility gate
+    feasibility_assessment_output: str
+
+    # semantic consistency gate
+    semantic_consistency_node_output: bool
 
     # sql generation / execution
     sql_generate_output: str
