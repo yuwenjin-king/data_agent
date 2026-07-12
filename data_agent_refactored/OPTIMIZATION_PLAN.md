@@ -109,25 +109,68 @@
 - 密码和 API key 加密存储，响应中默认脱敏。
 - CORS、文件上传、SQL 执行和 Python 执行增加安全边界。
 
-## 推荐执行顺序
+## 各阶段进展（截至 2026-07-12）
 
-1. 完成 P0，确保每次提交都有可运行基线。
-2. 做 P1 的 schema 对齐，不要在 schema 未确认前大规模迁移业务。
-3. 按“Datasource -> Agent 配置 -> Knowledge -> Chat workflow”的顺序补业务。
-4. 每迁移一个原项目模块，同时迁移或重写对应测试。
+### P0 可运行基线 — ✅ 已完成（提交 df67679 / 63b156f）
 
-## 本次已启动的优化范围
+- 修复 SQLAlchemy `metadata` 保留字、`CRUDBase[...]` 泛型、服务层 helper 导入。
+- 移除应用导入阶段的 `Base.metadata.create_all()` 副作用。
+- 前端依赖安装与构建通过（`63b156f` 修复 `ChatOutlined` → `MessageOutlined` 构建阻断）。
+- 最小 pytest 覆盖（应用导入、schema 序列化）。
 
-本次先处理 P0：
+### P1 数据库与接口契约收敛 — ✅ 已完成（提交 df67679）
 
-- 后端启动阻断修复。
-- 前端明显构建错误修复。
-- 前后端流式请求方式初步对齐。
-- 增加最小后端测试。
+- Alembic 配置与 `0001_initial_baseline` 基线迁移。
+- `docs/schema-compatibility.md`：原 Java entity ↔ Python model 对照。
+- 统一 `HTTPException` / 校验错误的 `ApiResponse` 响应格式。
+- SQLite 隔离 API 契约测试（Agent / Datasource / Knowledge / Chat / 错误响应）。
 
-## P1 当前进展
+### P2 基础业务能力 — ✅ 已完成（提交 df67679）
 
-- 已增加 Alembic 配置和 `0001_initial_baseline` 基线迁移。
-- 已新增 `docs/schema-compatibility.md`，记录原 Java entity 与 Python model 的兼容性状态。
-- 已统一 `HTTPException` 和请求校验错误的 `ApiResponse` 响应格式。
-- 已增加 SQLite 隔离 API 契约测试，覆盖 Agent、Datasource、Knowledge、Chat 和错误响应。
+- Datasource 连接测试、表/字段列表、逻辑关系管理。
+- Agent 发布/下线/API Key 管理。
+- 知识、语义模型、预设问题 CRUD、状态切换、Excel 批量导入。
+- 文件上传与本地存储。
+
+### P3 核心智能链路 — ⚠️ 核心链路已落地（提交 593f8ec），与原项目功能对齐尚有缺口
+
+已迁移（线性链路 + chitchat 分支）：
+
+`intent_recognition → evidence_recall → query_enhance → schema_recall → table_relation → sql_generate → sql_execute → report_generator`
+
+- LangGraph 工作流图、Jinja prompt、LLM/embedding client、内存向量库 + 混合检索、只读 SQL 执行器。
+- `workflow_service` 编排：SSE 流式 + 非流式、多轮上下文、消息持久化。
+- SQL 执行结果已含 `DisplayStyleBO` 图表配置（`data-view-analyze` prompt）——原项目的图表也由 SQL 节点的 LLM 调用产生，非 Python 绘图，此项已对齐。
+- 计划原文 P3 验收均已满足：真实流式事件、NL→SQL→执行→解释闭环、业务知识/语义模型召回、多轮上下文。
+
+**相对原 Java DataAgent 的功能缺口**（原项目为 plan-driven 多步图，非线性）：
+
+缺失节点（8）：
+
+1. `feasibility_assessment` — table_relation 之后的网关，把非"数据分析"类问题短路到 END。
+2. `planner` — 产出多步 `Plan` JSON（每步选 SQL/Python/Report 工具）驱动整图。
+3. `plan_executor` — 校验 Plan 并按步路由（主循环枢纽），替代当前隐式线性流。
+4. `semantic_consistency` — sql_generate 与 sql_execute 之间的 LLM 语义校验闸门。
+5. `python_generate` — LLM 生成 pandas 分析代码（禁止绘图/网络/子进程）。
+6. `python_execute` — 沙箱执行（原项目：Docker anaconda 镜像、无网络、cap-drop-all、内存/CPU 限制、60s 超时）。
+7. `python_analyze` — LLM 汇总 Python stdout 为自然语言分析。
+8. `human_feedback` — 基于 interrupt 的 Plan 人工审批（需 `interrupt_before` 编译 + 恢复 API）。
+
+缺失回边/循环：
+
+- `sql_execute → sql_generate` 执行失败重试；`semantic_consistency ↔ sql_generate` 语义失败重试；`sql_generate` 自重试上限 10。
+- `table_relation` 自重试上限 3；`python_execute → python_generate` 重试上限 5 + fallback。
+- `plan_executor ↔ planner` 修复上限 2；人工拒绝上限 3。
+- **`sql_execute → plan_executor`**（当前直连 `report_generator`，坍缩了多步 Plan 模型）。
+
+> 备注：Python 侧节点层已为 SQL 重试做好准备——`sql_generate` 已能读 `sql_regenerate_reason` 走 `sql-error-fixer` prompt，`sql_execute` 失败时已写 reason；只差 graph 回边与 `semantic_consistency` 闸门。
+
+### P4 生产化 — ⬜ 未开始
+
+见上文 P4 任务清单（CI、Docker Compose、lint、加密脱敏、结构化日志）。
+
+## 下一步执行顺序
+
+1. 先补 SQL 自愈闭环（`semantic_consistency` 闸门 + sql_execute 重试回边 + sql_generate 自重试上限）与 `feasibility_assessment` 网关——低风险，节点层已就绪。
+2. 再评审是否上 plan-driven 多步架构（planner + plan_executor + Python 分析沙箱）——较大架构变更，需单独确认范围与沙箱安全边界。
+3. 每补一个节点，同步补对应单测，并在 `test_graph.py` 增加端到端用例。
