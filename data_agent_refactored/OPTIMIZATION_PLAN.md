@@ -132,38 +132,30 @@
 - 知识、语义模型、预设问题 CRUD、状态切换、Excel 批量导入。
 - 文件上传与本地存储。
 
-### P3 核心智能链路 — ⚠️ 核心链路已落地（提交 593f8ec），与原项目功能对齐尚有缺口
+### P3 核心智能链路 — ✅ plan-driven 多步图已落地（593f8ec + Phase A+B，仅 human_feedback 待补）
 
-已迁移（线性链路 + chitchat 分支）：
+拓扑（含 chitchat 分支）：
 
-`intent_recognition → evidence_recall → query_enhance → schema_recall → table_relation → sql_generate → sql_execute → report_generator`
+plan-driven 多步图（已对齐原项目，Phase A+B 落地于 b42fbdf / 550a9c9 / 36b4107）：
 
-- LangGraph 工作流图、Jinja prompt、LLM/embedding client、内存向量库 + 混合检索、只读 SQL 执行器。
-- `workflow_service` 编排：SSE 流式 + 非流式、多轮上下文、消息持久化。
-- SQL 执行结果已含 `DisplayStyleBO` 图表配置（`data-view-analyze` prompt）——原项目的图表也由 SQL 节点的 LLM 调用产生，非 Python 绘图，此项已对齐。
-- 计划原文 P3 验收均已满足：真实流式事件、NL→SQL→执行→解释闭环、业务知识/语义模型召回、多轮上下文。
+```
+intent → evidence_recall → query_enhance → schema_recall → table_relation
+→ feasibility_assessment → planner → plan_executor（循环枢纽）
+→ sql_generate → semantic_consistency → sql_execute → plan_executor
+→ python_generate → python_execute → python_analyze → plan_executor
+→ report_generator
+```
 
-**相对原 Java DataAgent 的功能缺口**（原项目为 plan-driven 多步图，非线性）：
+- 已迁移节点：feasibility_assessment、planner、plan_executor、semantic_consistency、python_generate、python_execute、python_analyze（原 8 缺口中 7 个，仅 human_feedback 未做）。
+- SQL 自愈闭环：sql_execute 失败 / 语义失败均回 sql_generate 重试，全局 `sql_generate_count`≤10 封顶；sql_execute 成功时计数清零并推进 `plan_current_step`。
+- Python 分析子链：`app/workflow/code/executor.py` 本地沙箱（subprocess + AST 守卫 + 环境脱敏 + POSIX rlimit + 超时 + stdout 上限），失败重试≤5 后 fallback。
+- workflow_service 多步流式：即时下发 `sql` / `sql_result` / `plan` 事件，metadata 单步存标量、多步存列表。
+- 每个新节点均有无 LLM fallback，无 LLM / 无 Docker 也能跑通；全套 92 测试通过。
 
-缺失节点（8）：
+**仍待补齐**：
 
-1. `feasibility_assessment` — table_relation 之后的网关，把非"数据分析"类问题短路到 END。
-2. `planner` — 产出多步 `Plan` JSON（每步选 SQL/Python/Report 工具）驱动整图。
-3. `plan_executor` — 校验 Plan 并按步路由（主循环枢纽），替代当前隐式线性流。
-4. `semantic_consistency` — sql_generate 与 sql_execute 之间的 LLM 语义校验闸门。
-5. `python_generate` — LLM 生成 pandas 分析代码（禁止绘图/网络/子进程）。
-6. `python_execute` — 沙箱执行（原项目：Docker anaconda 镜像、无网络、cap-drop-all、内存/CPU 限制、60s 超时）。
-7. `python_analyze` — LLM 汇总 Python stdout 为自然语言分析。
-8. `human_feedback` — 基于 interrupt 的 Plan 人工审批（需 `interrupt_before` 编译 + 恢复 API）。
-
-缺失回边/循环：
-
-- `sql_execute → sql_generate` 执行失败重试；`semantic_consistency ↔ sql_generate` 语义失败重试；`sql_generate` 自重试上限 10。
-- `table_relation` 自重试上限 3；`python_execute → python_generate` 重试上限 5 + fallback。
-- `plan_executor ↔ planner` 修复上限 2；人工拒绝上限 3。
-- **`sql_execute → plan_executor`**（当前直连 `report_generator`，坍缩了多步 Plan 模型）。
-
-> 备注：Python 侧节点层已为 SQL 重试做好准备——`sql_generate` 已能读 `sql_regenerate_reason` 走 `sql-error-fixer` prompt，`sql_execute` 失败时已写 reason；只差 graph 回边与 `semantic_consistency` 闸门。
+- `human_feedback`（基于 interrupt 的 Plan 人工审批，需恢复 API + 前端 UI）——本轮明确不做。
+- Python 沙箱生产级隔离：当前本地执行器为纵深防御（超时 + rlimit + 脱敏 + AST 守卫），非真正沙箱；生产需接 Docker（`CODE_EXECUTOR_TYPE=docker`，现为 `NotImplementedError` 桩）或 nsjail。
 
 ### P4 生产化 — ⬜ 未开始
 
@@ -171,6 +163,7 @@
 
 ## 下一步执行顺序
 
-1. 先补 SQL 自愈闭环（`semantic_consistency` 闸门 + sql_execute 重试回边 + sql_generate 自重试上限）与 `feasibility_assessment` 网关——低风险，节点层已就绪。
-2. 再评审是否上 plan-driven 多步架构（planner + plan_executor + Python 分析沙箱）——较大架构变更，需单独确认范围与沙箱安全边界。
-3. 每补一个节点，同步补对应单测，并在 `test_graph.py` 增加端到端用例。
+1. ~~SQL 自愈闭环 + 可行性网关~~（已完成，b42fbdf）。
+2. ~~plan-driven 多步架构 + Python 分析沙箱~~（已完成，550a9c9 / 36b4107）。
+3. （可选）`human_feedback` 人工审批，或 Python 沙箱接 Docker。
+4. 进入 P4 生产化，或继续按需补端到端用例（多步 SQL+Python 混合计划的真实 LLM 集成测试）。
