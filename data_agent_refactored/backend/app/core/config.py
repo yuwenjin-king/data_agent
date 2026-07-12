@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     MAX_SQL_ROWS: int = 500
     MULTI_TURN_MAX_TURNS: int = 10
 
+    # Python analysis sandbox
+    CODE_EXEC_TIMEOUT_MS: int = 60_000
+    CODE_MAX_MEMORY_MB: int = 500
+    PYTHON_MAX_TRIES: int = 5
+
     # Vector store (memory | chroma | elasticsearch)
     VECTOR_STORE_TYPE: str = "memory"
 

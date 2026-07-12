@@ -6,9 +6,8 @@ from app.workflow.plan_utils import parse_plan
 from app.workflow.state import WorkflowState
 
 
-# Phase A supports sql_generate + report_generator. python_generate is added in
-# Phase B when the python sub-pipeline nodes are wired into the graph.
-SUPPORTED_TOOLS = {"sql_generate", "report_generator"}
+# Supported plan-step tools: sql_generate, python_generate (Phase B), report_generator.
+SUPPORTED_TOOLS = {"sql_generate", "python_generate", "report_generator"}
 
 
 def _validation_failed(state: WorkflowState, message: str) -> WorkflowState:
@@ -64,8 +63,16 @@ async def plan_executor_node(
         }
 
     step = plan.execution_plan[current - 1]
-    return {
+    update: WorkflowState = {
         "plan_validation_status": True,
         "plan_next_node": step.tool_to_use,
         "plan_validation_error": "",
     }
+    # Start each python step with a fresh retry budget (python_analyze →
+    # plan_executor only re-enters python_generate for a brand-new step, so a
+    # reset here is safe and prevents carry-over across python steps).
+    if step.tool_to_use == "python_generate":
+        update["python_tries_count"] = 0
+        update["python_fallback_mode"] = False
+        update["python_is_success"] = False
+    return update

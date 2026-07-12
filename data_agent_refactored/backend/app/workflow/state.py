@@ -155,6 +155,13 @@ class WorkflowState(TypedDict, total=False):
     sql_execute_node_output: Dict[str, Any]
     sql_result_list_memory: List[Dict[str, Any]]
 
+    # python analysis sub-pipeline
+    python_generate_node_output: str
+    python_execute_node_output: str
+    python_is_success: bool
+    python_tries_count: int
+    python_fallback_mode: bool
+
     # report / final
     result: str
     error: str
