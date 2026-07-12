@@ -13,6 +13,7 @@ from app.workflow.events import (
     node_complete_event,
     node_start_event,
     session_event,
+    sse_event,
     sql_event,
     sql_result_event,
 )
@@ -20,6 +21,7 @@ from app.workflow.graph import build_workflow_graph
 from app.workflow.llm.client import LLMClient
 from app.workflow.llm.embedding import EmbeddingClient
 from app.workflow.llm.registry import get_chat_client, get_embedding_client
+from app.workflow.state import WorkflowState
 from app.workflow.vectorstore.store import get_vector_store
 from app.schemas.chat import ChatSessionCreate, ChatMessageCreate
 
@@ -100,8 +102,9 @@ async def run_chat_workflow(
     graph = build_workflow_graph()
 
     final_result = ""
-    final_sql = None
-    final_execution_result = None
+    sql_events: list = []
+    sql_result_events: list = []
+    plan_output: Optional[dict] = None
     error_message = None
 
     try:
@@ -111,10 +114,25 @@ async def run_chat_workflow(
                 yield node_start_event(node=node_name)
                 if "result" in update:
                     final_result = update["result"]
-                if "sql_generate_output" in update:
-                    final_sql = update["sql_generate_output"]
-                if "sql_execute_node_output" in update:
-                    final_execution_result = update["sql_execute_node_output"]
+                # Stream per-step artifacts inline so multi-step plans surface
+                # every SQL statement / result, not just the last one.
+                sql_out = update.get("sql_generate_output")
+                if sql_out and sql_out.strip():
+                    sql_events.append(sql_out)
+                    yield sql_event(sql=sql_out)
+                exec_out = update.get("sql_execute_node_output")
+                if isinstance(exec_out, dict) and "error" not in exec_out and exec_out.get("result"):
+                    sql_result_events.append(exec_out)
+                    yield sql_result_event(
+                        result=exec_out.get("result"),
+                        display_style=exec_out.get("display_style"),
+                    )
+                if update.get("planner_node_output"):
+                    try:
+                        plan_output = json.loads(update["planner_node_output"])
+                        yield sse_event("plan", {"plan": plan_output})
+                    except Exception:
+                        pass
                 if "error" in update:
                     error_message = update["error"]
                 yield node_complete_event(node=node_name)
@@ -128,12 +146,17 @@ async def run_chat_workflow(
     # Stream the final assistant text to the client before persisting.
     yield f"event: message\ndata: {json.dumps({'text': final_result}, ensure_ascii=False)}\n\n"
 
-    # Persist assistant message.
+    # Persist assistant message. Keep metadata scalar when there's a single
+    # step for backward compatibility with existing readers.
     metadata: Dict[str, Any] = {}
-    if final_sql:
-        metadata["sql_query"] = final_sql
-    if final_execution_result:
-        metadata["execution_result"] = final_execution_result
+    if sql_events:
+        metadata["sql_query"] = sql_events[0] if len(sql_events) == 1 else sql_events
+    if sql_result_events:
+        metadata["execution_result"] = (
+            sql_result_events[0] if len(sql_result_events) == 1 else sql_result_events
+        )
+    if plan_output is not None:
+        metadata["plan"] = plan_output
     if error_message:
         metadata["error"] = error_message
 
@@ -148,14 +171,7 @@ async def run_chat_workflow(
         ),
     )
 
-    if final_sql:
-        yield sql_event(sql=final_sql)
-    if final_execution_result:
-        yield sql_result_event(result=final_execution_result)
-
     yield done_event()
 
-    # Return value is consumed by the router; we also embed the assistant message id in the final done for tests.
-    # Note: this final event is yielded after done; the caller may ignore it.
     if assistant_message:
         yield f"event: assistant_message\ndata: {json.dumps({'message_id': assistant_message.id}, ensure_ascii=False)}\n\n"

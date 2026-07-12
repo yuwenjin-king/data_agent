@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import desc
@@ -21,6 +23,15 @@ from app.services.chat_service import (
 from app.services.workflow_service import run_chat_workflow
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+def _parse_sse_payload(event: str) -> dict:
+    """Extract the JSON payload from a single SSE event string."""
+    try:
+        data = event.split("\ndata: ", 1)[1].split("\n\n")[0]
+        return json.loads(data)
+    except Exception:
+        return {}
 
 
 @router.post("/sessions", response_model=ApiResponse[ChatSessionResponse])
@@ -80,26 +91,21 @@ async def chat_completion(request: ChatRequest, db: Session = Depends(get_db)):
     if request.stream:
         return StreamingResponse(event_stream(), media_type="text/event-stream")
 
-    # Non-streaming: collect all events and return the final result.
+    # Non-streaming: collect all events and return the final result. A run may
+    # emit multiple sql / sql_result events (multi-step plan); accumulate them
+    # and return the last one in the scalar ChatResponse fields for contract
+    # stability. The full list is kept in the persisted message metadata.
     final_content = ""
     final_session_id = session_id
-    final_sql = None
-    final_execution_result = None
+    sql_list: list = []
+    result_list: list = []
     async for event in event_stream():
         if event.startswith("event: session"):
-            # Extract session id from data line.
-            data = event.split("\ndata: ", 1)[1].split("\n\n")[0]
-            import json
-            payload = json.loads(data)
-            final_session_id = payload.get("session_id", final_session_id)
+            final_session_id = _parse_sse_payload(event).get("session_id", final_session_id)
         elif event.startswith("event: sql\n"):
-            data = event.split("\ndata: ", 1)[1].split("\n\n")[0]
-            import json
-            final_sql = json.loads(data).get("sql")
+            sql_list.append(_parse_sse_payload(event).get("sql"))
         elif event.startswith("event: sql_result\n"):
-            data = event.split("\ndata: ", 1)[1].split("\n\n")[0]
-            import json
-            final_execution_result = json.loads(data).get("result")
+            result_list.append(_parse_sse_payload(event).get("result"))
         elif event.startswith("event: node_complete"):
             pass
         elif event.startswith("event: done"):
@@ -119,8 +125,8 @@ async def chat_completion(request: ChatRequest, db: Session = Depends(get_db)):
     return ApiResponse(data=ChatResponse(
         content=final_content,
         session_id=final_session_id,
-        sql_query=final_sql,
-        execution_result=final_execution_result,
+        sql_query=sql_list[-1] if sql_list else None,
+        execution_result=result_list[-1] if result_list else None,
     ))
 
 
