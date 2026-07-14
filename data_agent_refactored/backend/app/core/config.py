@@ -25,6 +25,15 @@ class Settings(BaseSettings):
     # File Upload
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
+    ALLOWED_UPLOAD_EXTENSIONS: list[str] = [
+        ".txt",
+        ".md",
+        ".pdf",
+        ".docx",
+        ".csv",
+        ".xlsx",
+        ".json",
+    ]
 
     # Encryption
     CRYPTO_KEY: str = ""  # base64 Fernet key; empty uses dev fallback

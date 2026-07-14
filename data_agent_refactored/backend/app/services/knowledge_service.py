@@ -20,7 +20,13 @@ from app.schemas.knowledge import (
 from app.services.crud_base import CRUDBase
 from app.services.datasource_service import agent_datasource_crud
 from app.utils.chunking import chunk_text
-from app.utils.file_storage import delete_file, read_file_text, save_upload_file
+from app.utils.file_storage import (
+    delete_file,
+    read_file_text,
+    read_with_size_limit,
+    safe_ext,
+    save_upload_file,
+)
 
 
 class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticModelUpdate]):
@@ -202,7 +208,9 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
     ) -> BatchImportResult:
         import pandas as pd
 
-        content = upload_file.file.read()
+        if safe_ext(upload_file.filename) != ".xlsx":
+            raise ValueError("Excel import requires an .xlsx file")
+        content = read_with_size_limit(upload_file)
         df = pd.read_excel(io.BytesIO(content))
         df.columns = [str(c).strip().lower().replace("*", "") for c in df.columns]
         column_map = {
