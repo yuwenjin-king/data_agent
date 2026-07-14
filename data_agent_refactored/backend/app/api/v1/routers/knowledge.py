@@ -1,23 +1,32 @@
 import asyncio
 import io
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy.orm import Session
 from typing import List, Optional
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.knowledge import (
-    SemanticModelCreate, SemanticModelUpdate, SemanticModelResponse,
-    SemanticModelBatchImportRequest, SemanticModelBatchIdsRequest,
-    BatchImportResult,
-    AgentKnowledgeCreate, AgentKnowledgeResponse,
-    AgentKnowledgeUpdate, AgentKnowledgeRecallUpdate,
-    AgentKnowledgeQueryRequest,
-    AgentPresetQuestionCreate, AgentPresetQuestionResponse
-)
 from app.schemas.common import ApiResponse, PageResponse
+from app.schemas.knowledge import (
+    AgentKnowledgeCreate,
+    AgentKnowledgeQueryRequest,
+    AgentKnowledgeRecallUpdate,
+    AgentKnowledgeResponse,
+    AgentKnowledgeUpdate,
+    AgentPresetQuestionCreate,
+    AgentPresetQuestionResponse,
+    BatchImportResult,
+    SemanticModelBatchIdsRequest,
+    SemanticModelBatchImportRequest,
+    SemanticModelCreate,
+    SemanticModelResponse,
+    SemanticModelUpdate,
+)
 from app.services.knowledge_service import (
-    semantic_model_crud, agent_knowledge_crud, agent_preset_question_crud
+    agent_knowledge_crud,
+    agent_preset_question_crud,
+    semantic_model_crud,
 )
 from app.workflow.indexing import (
     delete_agent_knowledge_index,

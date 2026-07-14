@@ -1,8 +1,15 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
 from typing import List, Optional, Tuple
+
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
+
 from app.models.agent import Agent, BusinessKnowledge
-from app.schemas.agent import AgentCreate, AgentUpdate, BusinessKnowledgeCreate, BusinessKnowledgeUpdate
+from app.schemas.agent import (
+    AgentCreate,
+    AgentUpdate,
+    BusinessKnowledgeCreate,
+    BusinessKnowledgeUpdate,
+)
 from app.services.crud_base import CRUDBase
 from app.utils.api_key import generate_api_key, mask_api_key
 from app.utils.crypto import encrypt

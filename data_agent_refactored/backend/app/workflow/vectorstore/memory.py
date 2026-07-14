@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Optional
+
 import numpy as np
 
 from app.workflow.vectorstore.base import VectorStore

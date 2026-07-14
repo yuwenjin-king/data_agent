@@ -1,7 +1,7 @@
 import pytest
 
-from app.schemas.chat import ChatSessionCreate, ChatMessageCreate
-from app.services.chat_service import chat_session_crud, chat_message_crud
+from app.schemas.chat import ChatMessageCreate, ChatSessionCreate
+from app.services.chat_service import chat_message_crud, chat_session_crud
 from app.services.workflow_service import build_multi_turn_context
 
 

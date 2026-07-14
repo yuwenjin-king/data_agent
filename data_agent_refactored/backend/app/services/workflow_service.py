@@ -5,7 +5,7 @@ from typing import Any, AsyncIterable, Dict, Optional
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.chat import ChatMessage, ChatSession
+from app.schemas.chat import ChatMessageCreate, ChatSessionCreate
 from app.services.chat_service import chat_message_crud, chat_session_crud
 from app.workflow.events import (
     done_event,
@@ -13,17 +13,14 @@ from app.workflow.events import (
     node_complete_event,
     node_start_event,
     session_event,
-    sse_event,
     sql_event,
     sql_result_event,
+    sse_event,
 )
 from app.workflow.graph import build_workflow_graph
-from app.workflow.llm.client import LLMClient
-from app.workflow.llm.embedding import EmbeddingClient
 from app.workflow.llm.registry import get_chat_client, get_embedding_client
 from app.workflow.state import WorkflowState
 from app.workflow.vectorstore.store import get_vector_store
-from app.schemas.chat import ChatSessionCreate, ChatMessageCreate
 
 
 def build_multi_turn_context(db: Session, session_id: str, max_turns: int = 10) -> str:

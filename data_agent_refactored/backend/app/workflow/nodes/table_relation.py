@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.knowledge import SemanticModel
 from app.services.datasource_service import logical_relation_crud
 from app.workflow.prompts.loader import PromptLoader
-from app.workflow.sql.schema_builder import build_schema_from_documents, format_schema_for_prompt
+from app.workflow.sql.schema_builder import build_schema_from_documents
 from app.workflow.sql.utils import (
     get_datasource_url_and_dialect,
     map_dialect_to_sql_dialect,

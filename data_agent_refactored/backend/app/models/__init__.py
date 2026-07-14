@@ -1,7 +1,12 @@
 from app.models.agent import Agent, BusinessKnowledge
-from app.models.datasource import Datasource, AgentDatasource, AgentDatasourceTables, LogicalRelation
-from app.models.knowledge import SemanticModel, AgentKnowledge, AgentPresetQuestion
-from app.models.chat import ChatSession, ChatMessage, UserPromptConfig, ModelConfig
+from app.models.chat import ChatMessage, ChatSession, ModelConfig, UserPromptConfig
+from app.models.datasource import (
+    AgentDatasource,
+    AgentDatasourceTables,
+    Datasource,
+    LogicalRelation,
+)
+from app.models.knowledge import AgentKnowledge, AgentPresetQuestion, SemanticModel
 
 __all__ = [
     "Agent",

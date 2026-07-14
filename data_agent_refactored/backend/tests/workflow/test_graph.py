@@ -1,18 +1,18 @@
 import json
 import os
-import pytest
 import uuid
 from unittest.mock import AsyncMock
 
+import pytest
 from sqlalchemy import create_engine, text
 
+from app.utils.crypto import encrypt
 from app.workflow.graph import build_workflow_graph
 from app.workflow.llm.client import LLMClient
 from app.workflow.llm.embedding import EmbeddingClient
 from app.workflow.state import WorkflowState
 from app.workflow.vectorstore.document import VectorDocument
 from app.workflow.vectorstore.memory import InMemoryVectorStore
-from app.utils.crypto import encrypt
 
 
 def _make_vector_store(datasource_id: int):
@@ -77,7 +77,7 @@ def _mock_llm_client(responses: dict) -> LLMClient:
 async def test_nl2sql_graph_with_sqlite_agent_db(db_session):
     # Create an agent datasource link and a real SQLite DB.
     from app.models.agent import Agent
-    from app.models.datasource import Datasource, AgentDatasource
+    from app.models.datasource import AgentDatasource, Datasource
 
     agent = Agent(name="test-agent", status="published")
     db_session.add(agent)

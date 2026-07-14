@@ -1,0 +1,21 @@
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [".venv", "migrations"]
+
+[tool.ruff.lint]
+# Default pyflakes/pycodify error classes plus import sorting.
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = [
+    "E712",  # == True / == False — SQLAlchemy requires == over `is` for column filters
+    "E711",  # == None — same SQLAlchemy column-comparison reason
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Side-effect imports (module registration) are intentional in __init__ / conftest.
+"__init__.py" = ["F401"]
+"tests/**" = ["F401"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

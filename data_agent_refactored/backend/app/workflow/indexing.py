@@ -1,16 +1,15 @@
-import asyncio
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
 from app.models.agent import BusinessKnowledge
 from app.models.knowledge import AgentKnowledge
-from app.workflow.llm.embedding import EmbeddingClient
-from app.workflow.vectorstore.document import VectorDocument
-from app.workflow.vectorstore.store import get_vector_store
 from app.utils.chunking import chunk_text
 from app.utils.db_introspection import list_columns, list_tables
 from app.utils.file_storage import read_file_text
+from app.workflow.llm.embedding import EmbeddingClient
+from app.workflow.vectorstore.document import VectorDocument
+from app.workflow.vectorstore.store import get_vector_store
 
 
 def _get_embedding_client() -> EmbeddingClient:

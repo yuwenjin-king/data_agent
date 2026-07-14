@@ -1,17 +1,22 @@
+import asyncio
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
-import asyncio
 
 from app.core.database import get_db
 from app.schemas.agent import (
-    AgentCreate, AgentUpdate, AgentResponse,
-    BusinessKnowledgeCreate, BusinessKnowledgeResponse, ApiKeyResponse
+    AgentCreate,
+    AgentResponse,
+    AgentUpdate,
+    ApiKeyResponse,
+    BusinessKnowledgeCreate,
+    BusinessKnowledgeResponse,
 )
-from app.schemas.common import ApiResponse, PageResponse, PageRequest
+from app.schemas.common import ApiResponse
 from app.schemas.datasource import InitSchemaRequest
 from app.services.agent_service import agent_crud, business_knowledge_crud
-from app.services.datasource_service import agent_datasource_crud, datasource_crud
+from app.services.datasource_service import agent_datasource_crud
 from app.workflow.indexing import index_business_knowledge, index_schema_documents
 from app.workflow.sql.utils import get_datasource_url_and_dialect
 

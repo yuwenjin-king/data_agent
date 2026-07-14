@@ -1,24 +1,33 @@
 import json
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.core.database import get_db
 from app.models.chat import ChatMessage
 from app.schemas.chat import (
-    ChatSessionCreate, ChatSessionUpdate, ChatSessionResponse,
-    ChatMessageCreate, ChatMessageResponse,
-    UserPromptConfigCreate, UserPromptConfigResponse,
-    ModelConfigCreate, ModelConfigUpdate, ModelConfigResponse,
-    ChatRequest, ChatResponse
+    ChatMessageCreate,
+    ChatMessageResponse,
+    ChatRequest,
+    ChatResponse,
+    ChatSessionCreate,
+    ChatSessionResponse,
+    ChatSessionUpdate,
+    ModelConfigCreate,
+    ModelConfigResponse,
+    ModelConfigUpdate,
+    UserPromptConfigCreate,
+    UserPromptConfigResponse,
 )
 from app.schemas.common import ApiResponse
 from app.services.chat_service import (
-    chat_session_crud, chat_message_crud,
-    user_prompt_config_crud, model_config_crud
+    chat_message_crud,
+    chat_session_crud,
+    model_config_crud,
+    user_prompt_config_crud,
 )
 from app.services.workflow_service import run_chat_workflow
 

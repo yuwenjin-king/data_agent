@@ -81,6 +81,7 @@ def test_business_knowledge_indexing(db_session):
 
     # Trigger indexing manually (normally done in router).
     import asyncio
+
     from app.workflow.indexing import index_business_knowledge
     asyncio.run(index_business_knowledge(knowledge))
 
@@ -113,6 +114,7 @@ def test_agent_knowledge_indexing(db_session):
     )
 
     import asyncio
+
     from app.workflow.indexing import index_agent_knowledge
     asyncio.run(index_agent_knowledge(knowledge))
 

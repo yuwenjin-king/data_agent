@@ -1,7 +1,7 @@
 import os
-from typing import Any, Dict
-from jinja2 import Environment, FileSystemLoader, BaseLoader, TemplateNotFound
+from typing import Any
 
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 _PROMPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 

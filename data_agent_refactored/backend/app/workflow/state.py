@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, List, Optional, TypedDict
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, Field
 
 from app.workflow.vectorstore.document import VectorDocument
 

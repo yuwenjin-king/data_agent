@@ -1,15 +1,29 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
 from typing import List, Optional
-from app.models.datasource import Datasource, AgentDatasource, LogicalRelation, AgentDatasourceTables
+
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
+
+from app.models.datasource import (
+    AgentDatasource,
+    AgentDatasourceTables,
+    Datasource,
+    LogicalRelation,
+)
 from app.schemas.datasource import (
-    DatasourceCreate, DatasourceUpdate, AgentDatasourceCreate,
-    LogicalRelationCreate, DatasourceTestResponse, InitSchemaRequest
+    AgentDatasourceCreate,
+    DatasourceCreate,
+    DatasourceTestResponse,
+    DatasourceUpdate,
+    LogicalRelationCreate,
 )
 from app.services.crud_base import CRUDBase
 from app.utils.crypto import encrypt, maybe_decrypt
-from app.utils.db_introspection import build_sqlalchemy_url, test_connection, list_tables, list_columns
-
+from app.utils.db_introspection import (
+    build_sqlalchemy_url,
+    list_columns,
+    list_tables,
+    test_connection,
+)
 
 SUPPORTED_DATASOURCE_TYPES = [
     {"type": "mysql", "name": "MySQL", "description": "MySQL 关系型数据库"},

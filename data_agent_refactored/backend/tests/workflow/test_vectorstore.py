@@ -1,8 +1,8 @@
 import pytest
 
+from app.workflow.retrieval.hybrid import hybrid_search
 from app.workflow.vectorstore.document import VectorDocument
 from app.workflow.vectorstore.memory import InMemoryVectorStore
-from app.workflow.retrieval.hybrid import hybrid_search
 
 
 def embed_user():

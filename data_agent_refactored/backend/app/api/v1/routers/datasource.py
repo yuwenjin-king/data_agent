@@ -1,16 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
 from app.core.database import get_db
-from app.schemas.datasource import (
-    DatasourceCreate, DatasourceUpdate, DatasourceResponse,
-    AgentDatasourceCreate, AgentDatasourceResponse,
-    LogicalRelationCreate, LogicalRelationResponse,
-    DatasourceTypeResponse, DatasourceTestResponse
-)
 from app.schemas.common import ApiResponse
-from app.services.datasource_service import datasource_crud, agent_datasource_crud, logical_relation_crud
+from app.schemas.datasource import (
+    AgentDatasourceCreate,
+    AgentDatasourceResponse,
+    DatasourceCreate,
+    DatasourceResponse,
+    DatasourceTestResponse,
+    DatasourceTypeResponse,
+    DatasourceUpdate,
+    LogicalRelationCreate,
+    LogicalRelationResponse,
+)
+from app.services.datasource_service import (
+    agent_datasource_crud,
+    datasource_crud,
+    logical_relation_crud,
+)
 
 router = APIRouter(prefix="/datasources", tags=["datasources"])
 
@@ -110,7 +120,7 @@ def link_agent_datasource(link_in: AgentDatasourceCreate, db: Session = Depends(
 @router.get("/agent-datasources/agent/{agent_id}", response_model=ApiResponse[List[AgentDatasourceResponse]])
 def list_agent_datasources(agent_id: int, db: Session = Depends(get_db)):
     links = agent_datasource_crud.get_multi_by_agent(db, agent_id=agent_id)
-    return ApiResponse(data=[AgentDatasourceResponse.model_validate(l) for l in links])
+    return ApiResponse(data=[AgentDatasourceResponse.model_validate(link) for link in links])
 
 
 @router.post("/logical-relations", response_model=ApiResponse[LogicalRelationResponse])

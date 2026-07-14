@@ -1,6 +1,7 @@
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, Optional
+
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class ChatSessionBase(BaseModel):

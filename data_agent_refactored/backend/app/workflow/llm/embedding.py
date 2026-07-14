@@ -1,6 +1,7 @@
 import hashlib
-import httpx
 from typing import List, Optional
+
+import httpx
 from openai import AsyncOpenAI
 
 from app.models.chat import ModelConfig

@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from app.api.v1.routers import agent, datasource, knowledge, chat
+
+from app.api.v1.routers import agent, chat, datasource, knowledge
 
 api_router = APIRouter(prefix="/api/v1")
 

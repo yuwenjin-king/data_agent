@@ -1,21 +1,26 @@
 import io
-from sqlalchemy.orm import Session
 from typing import List, Optional
-from sqlalchemy import and_, func
-from fastapi import UploadFile
 
-from app.models.knowledge import SemanticModel, AgentKnowledge, AgentPresetQuestion
+from fastapi import UploadFile
+from sqlalchemy import and_, func
+from sqlalchemy.orm import Session
+
 from app.models.agent import Agent
+from app.models.knowledge import AgentKnowledge, AgentPresetQuestion, SemanticModel
 from app.schemas.knowledge import (
-    SemanticModelCreate, SemanticModelUpdate,
-    SemanticModelBatchImportItem, AgentKnowledgeCreate,
-    AgentKnowledgeUpdate, AgentKnowledgeQueryRequest,
-    BatchImportResult, AgentPresetQuestionCreate
+    AgentKnowledgeCreate,
+    AgentKnowledgeQueryRequest,
+    AgentKnowledgeUpdate,
+    AgentPresetQuestionCreate,
+    BatchImportResult,
+    SemanticModelBatchImportItem,
+    SemanticModelCreate,
+    SemanticModelUpdate,
 )
 from app.services.crud_base import CRUDBase
 from app.services.datasource_service import agent_datasource_crud
-from app.utils.file_storage import save_upload_file, delete_file, read_file_text
 from app.utils.chunking import chunk_text
+from app.utils.file_storage import delete_file, read_file_text, save_upload_file
 
 
 class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticModelUpdate]):

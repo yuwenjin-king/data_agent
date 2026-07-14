@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from app.workflow.state import ColumnDTO, SchemaDTO, TableDTO
 from app.workflow.vectorstore.document import VectorDocument

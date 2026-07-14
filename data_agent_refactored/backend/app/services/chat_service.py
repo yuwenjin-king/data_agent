@@ -1,9 +1,18 @@
-from sqlalchemy.orm import Session
-from typing import List, Optional
-from sqlalchemy import and_
 import uuid
-from app.models.chat import ChatSession, ChatMessage, UserPromptConfig, ModelConfig
-from app.schemas.chat import ChatSessionCreate, ChatSessionUpdate, ChatMessageCreate, UserPromptConfigCreate, ModelConfigCreate, ModelConfigUpdate
+from typing import List, Optional
+
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
+
+from app.models.chat import ChatMessage, ChatSession, ModelConfig, UserPromptConfig
+from app.schemas.chat import (
+    ChatMessageCreate,
+    ChatSessionCreate,
+    ChatSessionUpdate,
+    ModelConfigCreate,
+    ModelConfigUpdate,
+    UserPromptConfigCreate,
+)
 from app.services.crud_base import CRUDBase
 
 

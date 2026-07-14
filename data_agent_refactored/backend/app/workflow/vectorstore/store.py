@@ -1,6 +1,5 @@
 from app.workflow.vectorstore.memory import InMemoryVectorStore
 
-
 _vector_store: InMemoryVectorStore | None = None
 
 

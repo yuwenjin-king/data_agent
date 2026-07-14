@@ -1,6 +1,6 @@
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError

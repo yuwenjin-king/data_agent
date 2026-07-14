@@ -5,7 +5,6 @@ from langchain_core.runnables import RunnableConfig
 from app.workflow.plan_utils import parse_plan
 from app.workflow.state import WorkflowState
 
-
 # Supported plan-step tools: sql_generate, python_generate (Phase B), report_generator.
 SUPPORTED_TOOLS = {"sql_generate", "python_generate", "report_generator"}
 

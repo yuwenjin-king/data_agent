@@ -1,7 +1,6 @@
 import secrets
 import string
 
-
 API_KEY_PREFIX = "sk-"
 API_KEY_RANDOM_LENGTH = 32
 

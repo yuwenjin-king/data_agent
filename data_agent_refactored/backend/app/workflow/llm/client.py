@@ -1,5 +1,6 @@
-import httpx
 from typing import Any, AsyncIterable, Dict, List, Optional
+
+import httpx
 from openai import AsyncOpenAI
 
 from app.models.chat import ModelConfig

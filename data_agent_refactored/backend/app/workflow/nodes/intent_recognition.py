@@ -7,7 +7,6 @@ from app.workflow.llm.client import LLMClient
 from app.workflow.prompts.loader import PromptLoader
 from app.workflow.state import IntentRecognitionOutput, WorkflowState
 
-
 # Simple keyword-based fallback when no LLM is available.
 DATA_ANALYSIS_KEYWORDS = [
     "查询", "分析", "统计", "列表", "排名", "总和", "平均值", "对比", "多少",

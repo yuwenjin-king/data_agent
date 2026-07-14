@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.core.config import settings
+
 from app.api.v1 import api_router
+from app.core.config import settings
 from app.schemas.common import ApiResponse
 
 app = FastAPI(
