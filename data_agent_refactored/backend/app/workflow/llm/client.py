@@ -4,6 +4,7 @@ import httpx
 from openai import AsyncOpenAI
 
 from app.models.chat import ModelConfig
+from app.utils.crypto import maybe_decrypt
 
 
 class LLMClient:
@@ -19,7 +20,7 @@ class LLMClient:
 
         http_client = self._build_http_client(config)
         self.client = AsyncOpenAI(
-            api_key=config.api_key,
+            api_key=maybe_decrypt(config.api_key),
             base_url=self.base_url,
             http_client=http_client,
         )
@@ -32,7 +33,7 @@ class LLMClient:
         if config.proxy_host:
             auth = ""
             if config.proxy_username and config.proxy_password:
-                auth = f"{config.proxy_username}:{config.proxy_password}@"
+                auth = f"{config.proxy_username}:{maybe_decrypt(config.proxy_password)}@"
             port = f":{config.proxy_port}" if config.proxy_port else ""
             proxy_url = f"http://{auth}{config.proxy_host}{port}"
         return httpx.AsyncClient(proxy=proxy_url, timeout=httpx.Timeout(600.0))

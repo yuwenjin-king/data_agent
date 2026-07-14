@@ -2,7 +2,7 @@ import base64
 import warnings
 from typing import Optional
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 from app.core.config import settings
 
@@ -41,6 +41,15 @@ def decrypt(value: str) -> str:
 
 
 def maybe_decrypt(value: Optional[str]) -> Optional[str]:
+    """Decrypt a value if it is a valid Fernet token; otherwise return as-is.
+
+    The tolerant fallback keeps the system working for legacy plaintext values
+    written before at-rest encryption was introduced, and for test fixtures
+    that construct ORM objects with raw strings.
+    """
     if not value:
         return value
-    return decrypt(value)
+    try:
+        return decrypt(value)
+    except (InvalidToken, Exception):
+        return value

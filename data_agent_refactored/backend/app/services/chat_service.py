@@ -14,6 +14,7 @@ from app.schemas.chat import (
     UserPromptConfigCreate,
 )
 from app.services.crud_base import CRUDBase
+from app.utils.crypto import encrypt
 
 
 class CRUDChatSession(CRUDBase[ChatSession, ChatSessionCreate, ChatSessionUpdate]):
@@ -73,6 +74,32 @@ class CRUDUserPromptConfig(CRUDBase[UserPromptConfig, UserPromptConfigCreate, Us
 
 
 class CRUDModelConfig(CRUDBase[ModelConfig, ModelConfigCreate, ModelConfigUpdate]):
+    # Secret fields encrypted at rest; decrypted on use, masked in responses.
+    _ENCRYPTED_FIELDS = ("api_key", "proxy_password")
+
+    def create(self, db: Session, obj_in: ModelConfigCreate) -> ModelConfig:
+        obj_data = self._dump_schema(obj_in)
+        for field in self._ENCRYPTED_FIELDS:
+            if obj_data.get(field):
+                obj_data[field] = encrypt(obj_data[field])
+        db_obj = self.model(**obj_data)
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    def update(self, db: Session, db_obj: ModelConfig, obj_in: ModelConfigUpdate) -> ModelConfig:
+        obj_data = self._dump_schema(obj_in, exclude_unset=True)
+        for field in self._ENCRYPTED_FIELDS:
+            if obj_data.get(field):
+                obj_data[field] = encrypt(obj_data[field])
+        for field, value in obj_data.items():
+            setattr(db_obj, field, value)
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
     def get_active(self, db: Session) -> Optional[ModelConfig]:
         return db.query(ModelConfig).filter(
             and_(

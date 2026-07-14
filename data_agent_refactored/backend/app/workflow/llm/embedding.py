@@ -5,6 +5,7 @@ import httpx
 from openai import AsyncOpenAI
 
 from app.models.chat import ModelConfig
+from app.utils.crypto import maybe_decrypt
 
 
 class EmbeddingClient:
@@ -23,11 +24,13 @@ class EmbeddingClient:
             if config.proxy_enabled and config.proxy_host:
                 auth = ""
                 if config.proxy_username and config.proxy_password:
-                    auth = f"{config.proxy_username}:{config.proxy_password}@"
+                    auth = f"{config.proxy_username}:{maybe_decrypt(config.proxy_password)}@"
                 port = f":{config.proxy_port}" if config.proxy_port else ""
                 proxy_url = f"http://{auth}{config.proxy_host}{port}"
                 http_client = httpx.AsyncClient(proxy=proxy_url, timeout=httpx.Timeout(600.0))
-            self.client = AsyncOpenAI(api_key=config.api_key, base_url=base_url, http_client=http_client)
+            self.client = AsyncOpenAI(
+                api_key=maybe_decrypt(config.api_key), base_url=base_url, http_client=http_client
+            )
 
     async def embed(self, texts: List[str]) -> List[List[float]]:
         if self.client is None or self.config is None:

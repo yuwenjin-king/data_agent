@@ -1,7 +1,10 @@
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+
+from app.utils.api_key import mask_api_key
+from app.utils.crypto import maybe_decrypt
 
 
 class ChatSessionBase(BaseModel):
@@ -125,6 +128,17 @@ class ModelConfigResponse(ModelConfigBase):
     created_time: datetime
     updated_time: datetime
     is_deleted: int
+
+    @field_validator("api_key", mode="after")
+    @classmethod
+    def _mask_api_key(cls, value: Optional[str]) -> Optional[str]:
+        # Decrypt (tolerant of legacy plaintext) then mask — never expose the raw key.
+        return mask_api_key(maybe_decrypt(value))
+
+    @field_validator("proxy_password", mode="after")
+    @classmethod
+    def _mask_proxy_password(cls, value: Optional[str]) -> Optional[str]:
+        return "****" if value else None
 
 
 class ChatRequest(BaseModel):
