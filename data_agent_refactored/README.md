@@ -68,6 +68,26 @@ data_agent_refactored/
 
 ## 快速开始
 
+### 方式一：Docker Compose 一键启动（推荐）
+
+需要 Docker 与 Docker Compose。一键拉起 MySQL + 后端 + 前端全栈：
+
+```bash
+cd data_agent_refactored
+cp .env.docker.example .env          # 配置 CRYPTO_KEY / MySQL 口令（务必随后改成自己的 key）
+docker compose up --build
+```
+
+- 后端启动前会自动执行 `alembic upgrade head` 建表。
+- 访问：前端 http://localhost:8080 ，后端 API http://localhost:8000/docs ，MySQL 暴露在主机 13306。
+- nginx 已把 `/api` 反代到后端，并保留 SSE 流式（聊天）。
+- `CRYPTO_KEY` 用于密钥加密，**必须跨重启保持不变**，否则历史加密数据无法解密。生成新 key：
+  `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+
+> 若连接的是已存在的原 DataAgent 数据库，进入 backend 容器执行 `alembic stamp head`（先对照 `docs/schema-compatibility.md`）。
+
+### 方式二：本地手动启动
+
 ### 前置条件
 - Python 3.9+
 - Node.js 16+
