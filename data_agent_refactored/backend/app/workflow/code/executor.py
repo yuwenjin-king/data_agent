@@ -5,6 +5,7 @@ environment, POSIX resource limits (CPU/address-space/nproc), a hard timeout,
 and a stdout cap. This is NOT a full sandbox — for production isolation use
 the Docker executor (CODE_EXECUTOR_TYPE=docker, currently a stub) or nsjail.
 """
+
 import ast
 import os
 import subprocess
@@ -23,8 +24,15 @@ except ImportError:  # pragma: no cover - non-POSIX
 
 # Modules the generated analysis code is never allowed to touch.
 FORBIDDEN_MODULES = {
-    "os", "subprocess", "pickle", "socket", "shutil", "pty",
-    "multiprocessing", "ctypes", "asyncio",
+    "os",
+    "subprocess",
+    "pickle",
+    "socket",
+    "shutil",
+    "pty",
+    "multiprocessing",
+    "ctypes",
+    "asyncio",
 }
 
 MAX_STDOUT_BYTES = 1 * 1024 * 1024  # 1 MB cap on captured stdout.
@@ -127,9 +135,7 @@ class DockerCodePoolExecutor:
     """Placeholder; real Docker isolation is deferred (Phase C)."""
 
     def run(self, code: str, stdin: str, timeout_ms: int) -> CodeResult:  # pragma: no cover
-        raise NotImplementedError(
-            "Docker 代码执行器尚未接入；请设置 CODE_EXECUTOR_TYPE=local。"
-        )
+        raise NotImplementedError("Docker 代码执行器尚未接入；请设置 CODE_EXECUTOR_TYPE=local。")
 
 
 def get_code_executor():

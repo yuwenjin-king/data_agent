@@ -15,12 +15,16 @@ async def schema_recall_node(
     config: Optional[RunnableConfig] = None,
 ) -> WorkflowState:
     configurable = (config or {}).get("configurable", {})
-    embedding_client: EmbeddingClient = configurable.get("embedding_client") or EmbeddingClient.dummy()
+    embedding_client: EmbeddingClient = (
+        configurable.get("embedding_client") or EmbeddingClient.dummy()
+    )
     vector_store: Optional[VectorStore] = configurable.get("vector_store")
     db: Optional[Session] = configurable.get("db")
 
     query_enhance_output = state.get("query_enhance_node_output")
-    canonical_query = query_enhance_output.canonical_query if query_enhance_output else state.get("input", "")
+    canonical_query = (
+        query_enhance_output.canonical_query if query_enhance_output else state.get("input", "")
+    )
     agent_id = state.get("agent_id")
 
     if not vector_store or not db:
@@ -39,7 +43,9 @@ async def schema_recall_node(
         top_k=5,
     )
 
-    recalled_table_names = [doc.metadata.get("table_name") or doc.metadata.get("name") for doc in table_docs]
+    recalled_table_names = [
+        doc.metadata.get("table_name") or doc.metadata.get("name") for doc in table_docs
+    ]
     recalled_table_names = [name for name in recalled_table_names if name]
 
     column_docs: List[VectorDocument] = []
@@ -51,8 +57,7 @@ async def schema_recall_node(
             top_k=50,
         )
         column_docs = [
-            doc for doc in all_column_docs
-            if doc.metadata.get("table_name") in recalled_table_names
+            doc for doc in all_column_docs if doc.metadata.get("table_name") in recalled_table_names
         ]
 
     return {

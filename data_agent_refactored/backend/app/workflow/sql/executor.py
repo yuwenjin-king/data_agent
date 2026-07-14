@@ -16,9 +16,24 @@ class SqlNotAllowedError(SqlExecutionError):
 
 # DML/DDL keywords that are not allowed in read-only mode.
 FORBIDDEN_KEYWORDS = [
-    "insert", "update", "delete", "drop", "alter", "create", "truncate",
-    "grant", "revoke", "execute", "call", "merge", "replace", "upsert",
-    "copy", "load", "attach", "detach",
+    "insert",
+    "update",
+    "delete",
+    "drop",
+    "alter",
+    "create",
+    "truncate",
+    "grant",
+    "revoke",
+    "execute",
+    "call",
+    "merge",
+    "replace",
+    "upsert",
+    "copy",
+    "load",
+    "attach",
+    "detach",
 ]
 
 
@@ -68,7 +83,11 @@ def execute_read_only_sql(
         with engine.connect() as conn:
             # Best-effort statement timeout.
             if dialect in ("postgresql", "mysql"):
-                timeout_stmt = "SET statement_timeout = :timeout" if dialect == "postgresql" else "SET SESSION MAX_EXECUTION_TIME=:timeout"
+                timeout_stmt = (
+                    "SET statement_timeout = :timeout"
+                    if dialect == "postgresql"
+                    else "SET SESSION MAX_EXECUTION_TIME=:timeout"
+                )
                 try:
                     conn.execute(text(timeout_stmt), {"timeout": timeout * 1000})
                 except SQLAlchemyError:

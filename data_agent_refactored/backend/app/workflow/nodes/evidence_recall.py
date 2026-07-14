@@ -13,7 +13,9 @@ async def evidence_recall_node(
     config: Optional[RunnableConfig] = None,
 ) -> WorkflowState:
     configurable = (config or {}).get("configurable", {})
-    embedding_client: EmbeddingClient = configurable.get("embedding_client") or EmbeddingClient.dummy()
+    embedding_client: EmbeddingClient = (
+        configurable.get("embedding_client") or EmbeddingClient.dummy()
+    )
     vector_store: Optional[VectorStore] = configurable.get("vector_store")
     agent_id = state.get("agent_id")
     query = state.get("input", "")

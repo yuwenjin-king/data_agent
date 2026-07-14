@@ -1,5 +1,6 @@
 """Tests for the Python analysis sub-pipeline: the local sandbox executor, the
 AST guard, the python_execute router, and the python node no-LLM fallbacks."""
+
 import json
 
 import pytest
@@ -22,9 +23,7 @@ def test_local_executor_runs_snippet():
         "data = json.load(sys.stdin)\n"
         "print(json.dumps({'count': len(data), 'total': sum(d.get('x', 0) for d in data)}))\n"
     )
-    result = LocalCodePoolExecutor().run(
-        code, json.dumps([{"x": 1}, {"x": 2}, {"x": 3}]), 5000
-    )
+    result = LocalCodePoolExecutor().run(code, json.dumps([{"x": 1}, {"x": 2}, {"x": 3}]), 5000)
     assert result.success
     assert json.loads(result.stdout) == {"count": 3, "total": 6}
 
@@ -62,9 +61,10 @@ def test_route_python_execute_success():
 
 
 def test_route_python_execute_retry_below_cap():
-    assert _route_python_execute(
-        {"python_is_success": False, "python_tries_count": 2}
-    ) == "python_generate"
+    assert (
+        _route_python_execute({"python_is_success": False, "python_tries_count": 2})
+        == "python_generate"
+    )
 
 
 def test_route_python_execute_cap_goes_to_END():

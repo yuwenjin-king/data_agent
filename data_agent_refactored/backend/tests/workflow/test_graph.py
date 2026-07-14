@@ -18,48 +18,80 @@ from app.workflow.vectorstore.memory import InMemoryVectorStore
 def _make_vector_store(datasource_id: int):
     store = InMemoryVectorStore()
     embed = EmbeddingClient._dummy_embedding
-    store.add_documents([
-        VectorDocument(
-            text="users user account member",
-            embedding=embed("users user account member"),
-            metadata={"vector_type": "TABLE", "datasource_id": datasource_id, "table_name": "users", "name": "users"},
-        ),
-        VectorDocument(
-            text="users.id integer primary key",
-            embedding=embed("users.id"),
-            metadata={"vector_type": "COLUMN", "datasource_id": datasource_id, "table_name": "users", "column_name": "id", "name": "id", "data_type": "INTEGER"},
-        ),
-        VectorDocument(
-            text="users.name varchar user name",
-            embedding=embed("users.name"),
-            metadata={"vector_type": "COLUMN", "datasource_id": datasource_id, "table_name": "users", "column_name": "name", "name": "name", "data_type": "VARCHAR"},
-        ),
-        VectorDocument(
-            text="users.age integer user age",
-            embedding=embed("users.age"),
-            metadata={"vector_type": "COLUMN", "datasource_id": datasource_id, "table_name": "users", "column_name": "age", "name": "age", "data_type": "INTEGER"},
-        ),
-    ])
+    store.add_documents(
+        [
+            VectorDocument(
+                text="users user account member",
+                embedding=embed("users user account member"),
+                metadata={
+                    "vector_type": "TABLE",
+                    "datasource_id": datasource_id,
+                    "table_name": "users",
+                    "name": "users",
+                },
+            ),
+            VectorDocument(
+                text="users.id integer primary key",
+                embedding=embed("users.id"),
+                metadata={
+                    "vector_type": "COLUMN",
+                    "datasource_id": datasource_id,
+                    "table_name": "users",
+                    "column_name": "id",
+                    "name": "id",
+                    "data_type": "INTEGER",
+                },
+            ),
+            VectorDocument(
+                text="users.name varchar user name",
+                embedding=embed("users.name"),
+                metadata={
+                    "vector_type": "COLUMN",
+                    "datasource_id": datasource_id,
+                    "table_name": "users",
+                    "column_name": "name",
+                    "name": "name",
+                    "data_type": "VARCHAR",
+                },
+            ),
+            VectorDocument(
+                text="users.age integer user age",
+                embedding=embed("users.age"),
+                metadata={
+                    "vector_type": "COLUMN",
+                    "datasource_id": datasource_id,
+                    "table_name": "users",
+                    "column_name": "age",
+                    "name": "age",
+                    "data_type": "INTEGER",
+                },
+            ),
+        ]
+    )
     return store
 
 
 def _mock_llm_client(responses: dict) -> LLMClient:
     """Create a mock LLMClient that returns canned responses based on prompt keywords."""
-    config = type("Config", (), {
-        "provider": "mock",
-        "base_url": "http://mock",
-        "api_key": "mock",
-        "model_name": "mock",
-        "temperature": 0.0,
-        "max_tokens": 2000,
-        "completions_path": None,
-        "embeddings_path": None,
-        "proxy_enabled": False,
-        "proxy_host": None,
-        "proxy_port": None,
-        "proxy_username": None,
-        "proxy_password": None,
-    })()
+    config = type(
+        "Config",
+        (),
+        {
+            "provider": "mock",
+            "base_url": "http://mock",
+            "api_key": "mock",
+            "model_name": "mock",
+            "temperature": 0.0,
+            "max_tokens": 2000,
+            "completions_path": None,
+            "embeddings_path": None,
+            "proxy_enabled": False,
+            "proxy_host": None,
+            "proxy_port": None,
+            "proxy_username": None,
+            "proxy_password": None,
+        },
+    )()
     client = LLMClient(config)
 
     async def acomplete(messages, **kwargs):
@@ -106,7 +138,9 @@ async def test_nl2sql_graph_with_sqlite_agent_db(db_session):
     db_session.add(datasource)
     db_session.flush()
 
-    agent_datasource = AgentDatasource(agent_id=agent.id, datasource_id=datasource.id, is_active=True)
+    agent_datasource = AgentDatasource(
+        agent_id=agent.id, datasource_id=datasource.id, is_active=True
+    )
     db_session.add(agent_datasource)
     db_session.commit()
 

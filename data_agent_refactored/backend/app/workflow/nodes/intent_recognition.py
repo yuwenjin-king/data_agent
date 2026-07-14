@@ -9,17 +9,42 @@ from app.workflow.state import IntentRecognitionOutput, WorkflowState
 
 # Simple keyword-based fallback when no LLM is available.
 DATA_ANALYSIS_KEYWORDS = [
-    "查询", "分析", "统计", "列表", "排名", "总和", "平均值", "对比", "多少",
-    "最高", "最低", "最大", "最小", "销售", "订单", "用户", "金额", "数量",
+    "查询",
+    "分析",
+    "统计",
+    "列表",
+    "排名",
+    "总和",
+    "平均值",
+    "对比",
+    "多少",
+    "最高",
+    "最低",
+    "最大",
+    "最小",
+    "销售",
+    "订单",
+    "用户",
+    "金额",
+    "数量",
 ]
 CHITCHAT_KEYWORDS = [
-    "你好", "谢谢", "再见", "嗨", "哈喽", "是谁", "叫什么", "能干什么",
+    "你好",
+    "谢谢",
+    "再见",
+    "嗨",
+    "哈喽",
+    "是谁",
+    "叫什么",
+    "能干什么",
 ]
 
 
 def _fallback_intent(query: str) -> IntentRecognitionOutput:
     lowered = query.lower()
-    if any(kw in lowered for kw in CHITCHAT_KEYWORDS) and not any(kw in lowered for kw in DATA_ANALYSIS_KEYWORDS):
+    if any(kw in lowered for kw in CHITCHAT_KEYWORDS) and not any(
+        kw in lowered for kw in DATA_ANALYSIS_KEYWORDS
+    ):
         return IntentRecognitionOutput(classification="chitchat")
     return IntentRecognitionOutput(classification="data_analysis")
 

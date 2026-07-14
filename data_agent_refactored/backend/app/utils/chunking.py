@@ -2,7 +2,9 @@ import re
 from typing import List
 
 
-def chunk_text(text: str, splitter_type: str = "token", chunk_size: int = 500, overlap: int = 0) -> List[str]:
+def chunk_text(
+    text: str, splitter_type: str = "token", chunk_size: int = 500, overlap: int = 0
+) -> List[str]:
     """Split text into chunks. This is a stub implementation for P2.
 
     - ``token``: split on whitespace, then group roughly ``chunk_size`` tokens.

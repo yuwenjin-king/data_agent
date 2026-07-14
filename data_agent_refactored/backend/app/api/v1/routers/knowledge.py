@@ -40,21 +40,20 @@ router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 # SemanticModel endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.get("/semantic-models/template/download")
 def download_semantic_model_template():
     data = semantic_model_crud.generate_template_bytes()
     return StreamingResponse(
         io.BytesIO(data),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=semantic_model_template.xlsx"}
+        headers={"Content-Disposition": "attachment; filename=semantic_model_template.xlsx"},
     )
 
 
 @router.post("/semantic-models/import/excel", response_model=ApiResponse[BatchImportResult])
 def import_semantic_models_excel(
-    agent_id: int = Form(...),
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    agent_id: int = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)
 ):
     try:
         result = semantic_model_crud.import_excel(db, agent_id=agent_id, upload_file=file)
@@ -65,8 +64,7 @@ def import_semantic_models_excel(
 
 @router.post("/semantic-models/batch-import", response_model=ApiResponse[BatchImportResult])
 def batch_import_semantic_models(
-    request: SemanticModelBatchImportRequest,
-    db: Session = Depends(get_db)
+    request: SemanticModelBatchImportRequest, db: Session = Depends(get_db)
 ):
     try:
         result = semantic_model_crud.batch_import(
@@ -79,8 +77,7 @@ def batch_import_semantic_models(
 
 @router.delete("/semantic-models/batch", response_model=ApiResponse)
 def batch_delete_semantic_models(
-    request: SemanticModelBatchIdsRequest,
-    db: Session = Depends(get_db)
+    request: SemanticModelBatchIdsRequest, db: Session = Depends(get_db)
 ):
     count = semantic_model_crud.batch_delete(db, ids=request.ids)
     return ApiResponse(message=f"Deleted {count} semantic models")
@@ -93,7 +90,7 @@ def list_semantic_models(
     status: Optional[int] = None,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     models = semantic_model_crud.search(
         db, agent_id=agent_id, keyword=keyword, status=status, skip=skip, limit=limit
@@ -101,7 +98,9 @@ def list_semantic_models(
     return ApiResponse(data=[SemanticModelResponse.model_validate(m) for m in models])
 
 
-@router.get("/semantic-models/{semantic_model_id}", response_model=ApiResponse[SemanticModelResponse])
+@router.get(
+    "/semantic-models/{semantic_model_id}", response_model=ApiResponse[SemanticModelResponse]
+)
 def get_semantic_model(semantic_model_id: int, db: Session = Depends(get_db)):
     model = semantic_model_crud.get(db, id=semantic_model_id)
     if not model:
@@ -118,11 +117,11 @@ def create_semantic_model(model_in: SemanticModelCreate, db: Session = Depends(g
     return ApiResponse(data=SemanticModelResponse.model_validate(model))
 
 
-@router.put("/semantic-models/{semantic_model_id}", response_model=ApiResponse[SemanticModelResponse])
+@router.put(
+    "/semantic-models/{semantic_model_id}", response_model=ApiResponse[SemanticModelResponse]
+)
 def update_semantic_model(
-    semantic_model_id: int,
-    model_in: SemanticModelUpdate,
-    db: Session = Depends(get_db)
+    semantic_model_id: int, model_in: SemanticModelUpdate, db: Session = Depends(get_db)
 ):
     model = semantic_model_crud.get(db, id=semantic_model_id)
     if not model:
@@ -140,7 +139,9 @@ def delete_semantic_model(semantic_model_id: int, db: Session = Depends(get_db))
     return ApiResponse(message="Semantic model deleted successfully")
 
 
-@router.put("/semantic-models/{semantic_model_id}/enable", response_model=ApiResponse[SemanticModelResponse])
+@router.put(
+    "/semantic-models/{semantic_model_id}/enable", response_model=ApiResponse[SemanticModelResponse]
+)
 def enable_semantic_model(semantic_model_id: int, db: Session = Depends(get_db)):
     model = semantic_model_crud.enable(db, id=semantic_model_id)
     if not model:
@@ -148,7 +149,10 @@ def enable_semantic_model(semantic_model_id: int, db: Session = Depends(get_db))
     return ApiResponse(data=SemanticModelResponse.model_validate(model))
 
 
-@router.put("/semantic-models/{semantic_model_id}/disable", response_model=ApiResponse[SemanticModelResponse])
+@router.put(
+    "/semantic-models/{semantic_model_id}/disable",
+    response_model=ApiResponse[SemanticModelResponse],
+)
 def disable_semantic_model(semantic_model_id: int, db: Session = Depends(get_db)):
     model = semantic_model_crud.disable(db, id=semantic_model_id)
     if not model:
@@ -157,7 +161,9 @@ def disable_semantic_model(semantic_model_id: int, db: Session = Depends(get_db)
 
 
 # Backward-compatible list by agent
-@router.get("/semantic-models/agent/{agent_id}", response_model=ApiResponse[List[SemanticModelResponse]])
+@router.get(
+    "/semantic-models/agent/{agent_id}", response_model=ApiResponse[List[SemanticModelResponse]]
+)
 def list_semantic_models_by_agent(agent_id: int, db: Session = Depends(get_db)):
     models = semantic_model_crud.get_multi_by_agent(db, agent_id=agent_id)
     return ApiResponse(data=[SemanticModelResponse.model_validate(m) for m in models])
@@ -166,6 +172,7 @@ def list_semantic_models_by_agent(agent_id: int, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 # AgentKnowledge endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/agent-knowledge/{knowledge_id}", response_model=ApiResponse[AgentKnowledgeResponse])
 def get_agent_knowledge(knowledge_id: int, db: Session = Depends(get_db)):
@@ -176,10 +183,7 @@ def get_agent_knowledge(knowledge_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/agent-knowledge", response_model=ApiResponse[AgentKnowledgeResponse])
-def create_agent_knowledge_json(
-    knowledge_in: AgentKnowledgeCreate,
-    db: Session = Depends(get_db)
-):
+def create_agent_knowledge_json(knowledge_in: AgentKnowledgeCreate, db: Session = Depends(get_db)):
     knowledge = agent_knowledge_crud.create(db, obj_in=knowledge_in)
     asyncio.run(index_agent_knowledge(knowledge))
     return ApiResponse(data=AgentKnowledgeResponse.model_validate(knowledge))
@@ -195,7 +199,7 @@ def create_agent_knowledge_multipart(
     is_recall: int = Form(1),
     splitter_type: str = Form("token"),
     file: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     try:
         knowledge = agent_knowledge_crud.create_with_file(
@@ -217,9 +221,7 @@ def create_agent_knowledge_multipart(
 
 @router.put("/agent-knowledge/{knowledge_id}", response_model=ApiResponse[AgentKnowledgeResponse])
 def update_agent_knowledge(
-    knowledge_id: int,
-    knowledge_in: AgentKnowledgeUpdate,
-    db: Session = Depends(get_db)
+    knowledge_id: int, knowledge_in: AgentKnowledgeUpdate, db: Session = Depends(get_db)
 ):
     knowledge = agent_knowledge_crud.update_fields(db, id=knowledge_id, obj_in=knowledge_in)
     if not knowledge:
@@ -227,11 +229,11 @@ def update_agent_knowledge(
     return ApiResponse(data=AgentKnowledgeResponse.model_validate(knowledge))
 
 
-@router.put("/agent-knowledge/{knowledge_id}/recall", response_model=ApiResponse[AgentKnowledgeResponse])
+@router.put(
+    "/agent-knowledge/{knowledge_id}/recall", response_model=ApiResponse[AgentKnowledgeResponse]
+)
 def toggle_agent_knowledge_recall(
-    knowledge_id: int,
-    request: AgentKnowledgeRecallUpdate,
-    db: Session = Depends(get_db)
+    knowledge_id: int, request: AgentKnowledgeRecallUpdate, db: Session = Depends(get_db)
 ):
     knowledge = agent_knowledge_crud.set_recall(db, id=knowledge_id, is_recall=request.is_recall)
     if not knowledge:
@@ -248,22 +250,26 @@ def delete_agent_knowledge(knowledge_id: int, db: Session = Depends(get_db)):
     return ApiResponse(message="Knowledge deleted successfully")
 
 
-@router.post("/agent-knowledge/query/page", response_model=ApiResponse[PageResponse[AgentKnowledgeResponse]])
-def query_agent_knowledge_page(
-    request: AgentKnowledgeQueryRequest,
-    db: Session = Depends(get_db)
-):
+@router.post(
+    "/agent-knowledge/query/page", response_model=ApiResponse[PageResponse[AgentKnowledgeResponse]]
+)
+def query_agent_knowledge_page(request: AgentKnowledgeQueryRequest, db: Session = Depends(get_db)):
     page = agent_knowledge_crud.query_page(db, request=request)
-    return ApiResponse(data=PageResponse(
-        items=[AgentKnowledgeResponse.model_validate(item) for item in page["items"]],
-        total=page["total"],
-        page=page["page"],
-        page_size=page["page_size"],
-        total_pages=page["total_pages"],
-    ))
+    return ApiResponse(
+        data=PageResponse(
+            items=[AgentKnowledgeResponse.model_validate(item) for item in page["items"]],
+            total=page["total"],
+            page=page["page"],
+            page_size=page["page_size"],
+            total_pages=page["total_pages"],
+        )
+    )
 
 
-@router.post("/agent-knowledge/{knowledge_id}/retry-embedding", response_model=ApiResponse[AgentKnowledgeResponse])
+@router.post(
+    "/agent-knowledge/{knowledge_id}/retry-embedding",
+    response_model=ApiResponse[AgentKnowledgeResponse],
+)
 def retry_agent_knowledge_embedding(knowledge_id: int, db: Session = Depends(get_db)):
     try:
         knowledge = agent_knowledge_crud.retry_embedding(db, id=knowledge_id)
@@ -276,7 +282,9 @@ def retry_agent_knowledge_embedding(knowledge_id: int, db: Session = Depends(get
 
 
 # Backward-compatible list by agent
-@router.get("/agent-knowledge/agent/{agent_id}", response_model=ApiResponse[List[AgentKnowledgeResponse]])
+@router.get(
+    "/agent-knowledge/agent/{agent_id}", response_model=ApiResponse[List[AgentKnowledgeResponse]]
+)
 def list_agent_knowledge_by_agent(agent_id: int, db: Session = Depends(get_db)):
     knowledge_list = agent_knowledge_crud.get_multi_by_agent(db, agent_id=agent_id)
     return ApiResponse(data=[AgentKnowledgeResponse.model_validate(k) for k in knowledge_list])
@@ -286,13 +294,17 @@ def list_agent_knowledge_by_agent(agent_id: int, db: Session = Depends(get_db)):
 # Preset question endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/preset-questions", response_model=ApiResponse[AgentPresetQuestionResponse])
 def create_preset_question(question_in: AgentPresetQuestionCreate, db: Session = Depends(get_db)):
     question = agent_preset_question_crud.create(db, obj_in=question_in)
     return ApiResponse(data=AgentPresetQuestionResponse.model_validate(question))
 
 
-@router.get("/preset-questions/agent/{agent_id}", response_model=ApiResponse[List[AgentPresetQuestionResponse]])
+@router.get(
+    "/preset-questions/agent/{agent_id}",
+    response_model=ApiResponse[List[AgentPresetQuestionResponse]],
+)
 def list_preset_questions(agent_id: int, db: Session = Depends(get_db)):
     questions = agent_preset_question_crud.get_multi_by_agent(db, agent_id=agent_id)
     return ApiResponse(data=[AgentPresetQuestionResponse.model_validate(q) for q in questions])

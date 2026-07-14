@@ -8,8 +8,7 @@ API_KEY_RANDOM_LENGTH = 32
 def generate_api_key() -> str:
     """Generate a secure API key in the form sk-<32 alphanumerics>."""
     random_part = "".join(
-        secrets.choice(string.ascii_letters + string.digits)
-        for _ in range(API_KEY_RANDOM_LENGTH)
+        secrets.choice(string.ascii_letters + string.digits) for _ in range(API_KEY_RANDOM_LENGTH)
     )
     return f"{API_KEY_PREFIX}{random_part}"
 

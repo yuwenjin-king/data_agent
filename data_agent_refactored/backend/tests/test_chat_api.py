@@ -16,10 +16,10 @@ async def test_chat_completion_streaming_chitchat(client):
     for line in response.iter_lines():
         line = line.decode("utf-8") if isinstance(line, bytes) else line
         if line.startswith("event: "):
-            event_name = line[len("event: "):]
+            event_name = line[len("event: ") :]
             events.append(event_name)
         elif line.startswith("data: "):
-            data = json.loads(line[len("data: "):])
+            data = json.loads(line[len("data: ") :])
             events.append((event_name, data))
 
     event_names = [e for e in events if isinstance(e, str)]

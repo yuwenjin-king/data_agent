@@ -80,7 +80,9 @@ def create_message(message_in: ChatMessageCreate, db: Session = Depends(get_db))
 
 @router.get("/messages/session/{session_id}", response_model=ApiResponse[List[ChatMessageResponse]])
 def list_messages(session_id: str, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    messages = chat_message_crud.get_multi_by_session(db, session_id=session_id, skip=skip, limit=limit)
+    messages = chat_message_crud.get_multi_by_session(
+        db, session_id=session_id, skip=skip, limit=limit
+    )
     return ApiResponse(data=[ChatMessageResponse.model_validate(m) for m in messages])
 
 
@@ -131,12 +133,14 @@ async def chat_completion(request: ChatRequest, db: Session = Depends(get_db)):
     if message:
         final_content = message.content
 
-    return ApiResponse(data=ChatResponse(
-        content=final_content,
-        session_id=final_session_id,
-        sql_query=sql_list[-1] if sql_list else None,
-        execution_result=result_list[-1] if result_list else None,
-    ))
+    return ApiResponse(
+        data=ChatResponse(
+            content=final_content,
+            session_id=final_session_id,
+            sql_query=sql_list[-1] if sql_list else None,
+            execution_result=result_list[-1] if result_list else None,
+        )
+    )
 
 
 @router.post("/prompt-configs", response_model=ApiResponse[UserPromptConfigResponse])
@@ -147,12 +151,12 @@ def create_prompt_config(config_in: UserPromptConfigCreate, db: Session = Depend
 
 @router.get("/prompt-configs", response_model=ApiResponse[List[UserPromptConfigResponse]])
 def list_prompt_configs(
-    prompt_type: str = None,
-    agent_id: int = None,
-    db: Session = Depends(get_db)
+    prompt_type: str = None, agent_id: int = None, db: Session = Depends(get_db)
 ):
     if prompt_type:
-        configs = user_prompt_config_crud.get_multi_by_type(db, prompt_type=prompt_type, agent_id=agent_id)
+        configs = user_prompt_config_crud.get_multi_by_type(
+            db, prompt_type=prompt_type, agent_id=agent_id
+        )
     else:
         configs = user_prompt_config_crud.get_multi(db)
     return ApiResponse(data=[UserPromptConfigResponse.model_validate(c) for c in configs])
@@ -174,7 +178,9 @@ def list_model_configs(model_type: str = None, db: Session = Depends(get_db)):
 
 
 @router.put("/model-configs/{config_id}", response_model=ApiResponse[ModelConfigResponse])
-def update_model_config(config_id: int, config_in: ModelConfigUpdate, db: Session = Depends(get_db)):
+def update_model_config(
+    config_id: int, config_in: ModelConfigUpdate, db: Session = Depends(get_db)
+):
     config = model_config_crud.get(db, id=config_id)
     if not config:
         raise HTTPException(status_code=404, detail="Model config not found")

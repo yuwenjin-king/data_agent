@@ -3,6 +3,7 @@
 Shared by nodes that need the current step's instruction (sql_generate,
 semantic_consistency) and by plan_executor for validation/routing.
 """
+
 import json
 from typing import Any, Dict
 

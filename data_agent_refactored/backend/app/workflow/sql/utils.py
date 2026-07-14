@@ -12,7 +12,9 @@ def resolve_agent_datasource(db: Session, agent_id: int) -> Optional[AgentDataso
     return agent_datasource_crud.get_active_by_agent(db, agent_id=agent_id)
 
 
-def get_datasource_url_and_dialect(db: Session, agent_datasource: AgentDatasource) -> Tuple[Optional[str], Optional[str]]:
+def get_datasource_url_and_dialect(
+    db: Session, agent_datasource: AgentDatasource
+) -> Tuple[Optional[str], Optional[str]]:
     datasource = db.get(Datasource, agent_datasource.datasource_id)
     if not datasource:
         return None, None

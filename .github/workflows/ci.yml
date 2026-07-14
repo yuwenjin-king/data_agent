@@ -32,6 +32,9 @@ jobs:
       - name: Lint (ruff check)
         run: ruff check app tests
 
+      - name: Format check (ruff format)
+        run: ruff format --check app tests
+
       - name: Test (pytest)
         run: pytest -q
 

@@ -58,6 +58,7 @@ def test_schema_indexing_via_init_schema(client, db_session):
     assert any(doc.metadata.get("table_name") == "products" for doc in table_docs)
 
     import os
+
     os.remove(sqlite_path)
 
 
@@ -83,6 +84,7 @@ def test_business_knowledge_indexing(db_session):
     import asyncio
 
     from app.workflow.indexing import index_business_knowledge
+
     asyncio.run(index_business_knowledge(knowledge))
 
     store = get_vector_store()
@@ -116,6 +118,7 @@ def test_agent_knowledge_indexing(db_session):
     import asyncio
 
     from app.workflow.indexing import index_agent_knowledge
+
     asyncio.run(index_agent_knowledge(knowledge))
 
     store = get_vector_store()

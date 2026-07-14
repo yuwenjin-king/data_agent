@@ -31,7 +31,11 @@ async def sql_generate_node(
 
     schema = state.get("table_relation_output")
     evidence = state.get("evidence", "")
-    query = state.get("query_enhance_node_output", {}).canonical_query if state.get("query_enhance_node_output") else state.get("input", "")
+    query = (
+        state.get("query_enhance_node_output", {}).canonical_query
+        if state.get("query_enhance_node_output")
+        else state.get("input", "")
+    )
     # The step instruction drives SQL generation; fall back to the canonical query
     # when the planner didn't provide one (e.g. nl2sql-only / no-LLM fallback).
     execution_description = get_current_step_instruction(state) or query

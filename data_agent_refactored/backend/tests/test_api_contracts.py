@@ -270,7 +270,9 @@ def test_semantic_model_contract(client):
 
 
 def test_agent_knowledge_contract(client):
-    agent_id = client.post("/api/v1/agents", json={"name": "knowledge-doc-agent"}).json()["data"]["id"]
+    agent_id = client.post("/api/v1/agents", json={"name": "knowledge-doc-agent"}).json()["data"][
+        "id"
+    ]
 
     knowledge_response = client.post(
         "/api/v1/knowledge/agent-knowledge",
@@ -291,7 +293,9 @@ def test_agent_knowledge_contract(client):
 
 
 def test_chat_session_get_update_and_list_by_agent_contract(client):
-    agent_id = client.post("/api/v1/agents", json={"name": "chat-session-agent"}).json()["data"]["id"]
+    agent_id = client.post("/api/v1/agents", json={"name": "chat-session-agent"}).json()["data"][
+        "id"
+    ]
 
     session_response = client.post(
         "/api/v1/chat/sessions",

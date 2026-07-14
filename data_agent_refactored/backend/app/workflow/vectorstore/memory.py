@@ -69,7 +69,5 @@ class InMemoryVectorStore(VectorStore):
 
     def delete_by_metadata(self, filter_expr: Dict[str, Any]) -> int:
         original_count = len(self.documents)
-        self.documents = [
-            doc for doc in self.documents if not self._matches(doc, filter_expr)
-        ]
+        self.documents = [doc for doc in self.documents if not self._matches(doc, filter_expr)]
         return original_count - len(self.documents)

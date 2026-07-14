@@ -40,10 +40,14 @@ class CRUDDatasource(CRUDBase[Datasource, DatasourceCreate, DatasourceUpdate]):
     def get_by_name(self, db: Session, name: str) -> Optional[Datasource]:
         return db.query(Datasource).filter(Datasource.name == name).first()
 
-    def get_multi_active(
-        self, db: Session, *, skip: int = 0, limit: int = 100
-    ) -> List[Datasource]:
-        return db.query(Datasource).filter(Datasource.status == "active").offset(skip).limit(limit).all()
+    def get_multi_active(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[Datasource]:
+        return (
+            db.query(Datasource)
+            .filter(Datasource.status == "active")
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
     def create(self, db: Session, obj_in: DatasourceCreate) -> Datasource:
         obj_data = self._dump_schema(obj_in)
@@ -135,34 +139,46 @@ class CRUDAgentDatasource(CRUDBase[AgentDatasource, AgentDatasourceCreate, Agent
     def get_by_agent_and_datasource(
         self, db: Session, agent_id: int, datasource_id: int
     ) -> Optional[AgentDatasource]:
-        return db.query(AgentDatasource).filter(
-            and_(
-                AgentDatasource.agent_id == agent_id,
-                AgentDatasource.datasource_id == datasource_id
+        return (
+            db.query(AgentDatasource)
+            .filter(
+                and_(
+                    AgentDatasource.agent_id == agent_id,
+                    AgentDatasource.datasource_id == datasource_id,
+                )
             )
-        ).first()
+            .first()
+        )
 
     def get_multi_by_agent(
         self, db: Session, *, agent_id: int, skip: int = 0, limit: int = 100
     ) -> List[AgentDatasource]:
-        return db.query(AgentDatasource).filter(
-            AgentDatasource.agent_id == agent_id
-        ).offset(skip).limit(limit).all()
+        return (
+            db.query(AgentDatasource)
+            .filter(AgentDatasource.agent_id == agent_id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
     def get_active_by_agent(self, db: Session, *, agent_id: int) -> Optional[AgentDatasource]:
-        return db.query(AgentDatasource).filter(
-            and_(
-                AgentDatasource.agent_id == agent_id,
-                AgentDatasource.is_active == 1
-            )
-        ).first()
+        return (
+            db.query(AgentDatasource)
+            .filter(and_(AgentDatasource.agent_id == agent_id, AgentDatasource.is_active == 1))
+            .first()
+        )
 
-    def init_schema(self, db: Session, *, agent_id: int, table_names: List[str]) -> Optional[AgentDatasource]:
+    def init_schema(
+        self, db: Session, *, agent_id: int, table_names: List[str]
+    ) -> Optional[AgentDatasource]:
         link = self.get_active_by_agent(db, agent_id=agent_id)
         if not link:
-            link = db.query(AgentDatasource).filter(
-                AgentDatasource.agent_id == agent_id
-            ).order_by(AgentDatasource.create_time.desc()).first()
+            link = (
+                db.query(AgentDatasource)
+                .filter(AgentDatasource.agent_id == agent_id)
+                .order_by(AgentDatasource.create_time.desc())
+                .first()
+            )
         if not link:
             return None
 
@@ -171,10 +187,7 @@ class CRUDAgentDatasource(CRUDBase[AgentDatasource, AgentDatasourceCreate, Agent
         ).delete()
 
         for table_name in table_names:
-            db.add(AgentDatasourceTables(
-                agent_datasource_id=link.id,
-                table_name=table_name
-            ))
+            db.add(AgentDatasourceTables(agent_datasource_id=link.id, table_name=table_name))
         db.commit()
         db.refresh(link)
         return link
@@ -184,12 +197,17 @@ class CRUDLogicalRelation(CRUDBase[LogicalRelation, LogicalRelationCreate, Logic
     def get_multi_by_datasource(
         self, db: Session, *, datasource_id: int, skip: int = 0, limit: int = 100
     ) -> List[LogicalRelation]:
-        return db.query(LogicalRelation).filter(
-            and_(
-                LogicalRelation.datasource_id == datasource_id,
-                LogicalRelation.is_deleted == 0
+        return (
+            db.query(LogicalRelation)
+            .filter(
+                and_(
+                    LogicalRelation.datasource_id == datasource_id, LogicalRelation.is_deleted == 0
+                )
             )
-        ).offset(skip).limit(limit).all()
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
 
 datasource_crud = CRUDDatasource(Datasource)

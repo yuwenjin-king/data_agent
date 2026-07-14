@@ -43,15 +43,17 @@ async def index_schema_documents(
 
     for table_name in tables:
         table_text = f"表 {table_name}"
-        table_docs.append(VectorDocument(
-            text=table_text,
-            metadata={
-                "vector_type": "TABLE",
-                "datasource_id": datasource_id,
-                "table_name": table_name,
-                "name": table_name,
-            },
-        ))
+        table_docs.append(
+            VectorDocument(
+                text=table_text,
+                metadata={
+                    "vector_type": "TABLE",
+                    "datasource_id": datasource_id,
+                    "table_name": table_name,
+                    "name": table_name,
+                },
+            )
+        )
 
         try:
             columns = list_columns(url, table_name)
@@ -59,16 +61,18 @@ async def index_schema_documents(
             columns = []
         for column_name in columns:
             column_text = f"表 {table_name} 字段 {column_name}"
-            column_docs.append(VectorDocument(
-                text=column_text,
-                metadata={
-                    "vector_type": "COLUMN",
-                    "datasource_id": datasource_id,
-                    "table_name": table_name,
-                    "column_name": column_name,
-                    "name": column_name,
-                },
-            ))
+            column_docs.append(
+                VectorDocument(
+                    text=column_text,
+                    metadata={
+                        "vector_type": "COLUMN",
+                        "datasource_id": datasource_id,
+                        "table_name": table_name,
+                        "column_name": column_name,
+                        "name": column_name,
+                    },
+                )
+            )
 
     all_docs = table_docs + column_docs
     if not all_docs:

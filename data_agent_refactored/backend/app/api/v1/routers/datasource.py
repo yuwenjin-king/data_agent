@@ -52,7 +52,9 @@ def list_datasources(skip: int = 0, limit: int = 100, db: Session = Depends(get_
 
 
 @router.put("/{datasource_id}", response_model=ApiResponse[DatasourceResponse])
-def update_datasource(datasource_id: int, datasource_in: DatasourceUpdate, db: Session = Depends(get_db)):
+def update_datasource(
+    datasource_id: int, datasource_in: DatasourceUpdate, db: Session = Depends(get_db)
+):
     datasource = datasource_crud.get(db, id=datasource_id)
     if not datasource:
         raise HTTPException(status_code=404, detail="Datasource not found")
@@ -98,7 +100,9 @@ def list_datasource_columns(datasource_id: int, table_name: str, db: Session = D
     if not datasource:
         raise HTTPException(status_code=404, detail="Datasource not found")
     try:
-        columns = datasource_crud.list_columns(db, datasource_id=datasource_id, table_name=table_name)
+        columns = datasource_crud.list_columns(
+            db, datasource_id=datasource_id, table_name=table_name
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
@@ -117,7 +121,9 @@ def link_agent_datasource(link_in: AgentDatasourceCreate, db: Session = Depends(
     return ApiResponse(data=AgentDatasourceResponse.model_validate(link))
 
 
-@router.get("/agent-datasources/agent/{agent_id}", response_model=ApiResponse[List[AgentDatasourceResponse]])
+@router.get(
+    "/agent-datasources/agent/{agent_id}", response_model=ApiResponse[List[AgentDatasourceResponse]]
+)
 def list_agent_datasources(agent_id: int, db: Session = Depends(get_db)):
     links = agent_datasource_crud.get_multi_by_agent(db, agent_id=agent_id)
     return ApiResponse(data=[AgentDatasourceResponse.model_validate(link) for link in links])
@@ -129,7 +135,10 @@ def create_logical_relation(relation_in: LogicalRelationCreate, db: Session = De
     return ApiResponse(data=LogicalRelationResponse.model_validate(relation))
 
 
-@router.get("/logical-relations/datasource/{datasource_id}", response_model=ApiResponse[List[LogicalRelationResponse]])
+@router.get(
+    "/logical-relations/datasource/{datasource_id}",
+    response_model=ApiResponse[List[LogicalRelationResponse]],
+)
 def list_logical_relations(datasource_id: int, db: Session = Depends(get_db)):
     relations = logical_relation_crud.get_multi_by_datasource(db, datasource_id=datasource_id)
     return ApiResponse(data=[LogicalRelationResponse.model_validate(r) for r in relations])

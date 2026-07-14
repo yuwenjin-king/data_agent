@@ -27,28 +27,39 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
     def get_multi_by_agent(
         self, db: Session, *, agent_id: int, skip: int = 0, limit: int = 100
     ) -> List[SemanticModel]:
-        return db.query(SemanticModel).filter(
-            and_(
-                SemanticModel.agent_id == agent_id,
-                SemanticModel.status == 1
-            )
-        ).offset(skip).limit(limit).all()
+        return (
+            db.query(SemanticModel)
+            .filter(and_(SemanticModel.agent_id == agent_id, SemanticModel.status == 1))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
     def get_by_table(
         self, db: Session, *, agent_id: int, datasource_id: int, table_name: str
     ) -> List[SemanticModel]:
-        return db.query(SemanticModel).filter(
-            and_(
-                SemanticModel.agent_id == agent_id,
-                SemanticModel.datasource_id == datasource_id,
-                SemanticModel.table_name == table_name,
-                SemanticModel.status == 1
+        return (
+            db.query(SemanticModel)
+            .filter(
+                and_(
+                    SemanticModel.agent_id == agent_id,
+                    SemanticModel.datasource_id == datasource_id,
+                    SemanticModel.table_name == table_name,
+                    SemanticModel.status == 1,
+                )
             )
-        ).all()
+            .all()
+        )
 
     def search(
-        self, db: Session, *, agent_id: Optional[int] = None, keyword: Optional[str] = None,
-        status: Optional[int] = None, skip: int = 0, limit: int = 100
+        self,
+        db: Session,
+        *,
+        agent_id: Optional[int] = None,
+        keyword: Optional[str] = None,
+        status: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 100,
     ) -> List[SemanticModel]:
         query = db.query(SemanticModel)
         if agent_id is not None:
@@ -70,9 +81,12 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
         link = agent_datasource_crud.get_active_by_agent(db, agent_id=agent_id)
         if link:
             return link.datasource_id
-        link = db.query(agent_datasource_crud.model).filter(
-            agent_datasource_crud.model.agent_id == agent_id
-        ).order_by(agent_datasource_crud.model.create_time.desc()).first()
+        link = (
+            db.query(agent_datasource_crud.model)
+            .filter(agent_datasource_crud.model.agent_id == agent_id)
+            .order_by(agent_datasource_crud.model.create_time.desc())
+            .first()
+        )
         if link:
             return link.datasource_id
         raise ValueError(f"No datasource found for agent {agent_id}")
@@ -94,13 +108,17 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
     def get_by_agent_table_column(
         self, db: Session, *, agent_id: int, table_name: str, column_name: str
     ) -> Optional[SemanticModel]:
-        return db.query(SemanticModel).filter(
-            and_(
-                SemanticModel.agent_id == agent_id,
-                SemanticModel.table_name == table_name,
-                SemanticModel.column_name == column_name,
+        return (
+            db.query(SemanticModel)
+            .filter(
+                and_(
+                    SemanticModel.agent_id == agent_id,
+                    SemanticModel.table_name == table_name,
+                    SemanticModel.column_name == column_name,
+                )
             )
-        ).first()
+            .first()
+        )
 
     def batch_import(
         self, db: Session, *, agent_id: int, items: List[SemanticModelBatchImportItem]
@@ -151,7 +169,11 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
         )
 
     def batch_delete(self, db: Session, *, ids: List[int]) -> int:
-        count = db.query(SemanticModel).filter(SemanticModel.id.in_(ids)).delete(synchronize_session=False)
+        count = (
+            db.query(SemanticModel)
+            .filter(SemanticModel.id.in_(ids))
+            .delete(synchronize_session=False)
+        )
         db.commit()
         return count
 
@@ -179,18 +201,26 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
         self, db: Session, *, agent_id: int, upload_file: UploadFile
     ) -> BatchImportResult:
         import pandas as pd
+
         content = upload_file.file.read()
         df = pd.read_excel(io.BytesIO(content))
         df.columns = [str(c).strip().lower().replace("*", "") for c in df.columns]
         column_map = {
-            "表名": "table_name", "tablename": "table_name",
-            "字段名": "column_name", "columnname": "column_name",
-            "业务名称": "business_name", "businessname": "business_name",
-            "数据类型": "data_type", "datatype": "data_type",
+            "表名": "table_name",
+            "tablename": "table_name",
+            "字段名": "column_name",
+            "columnname": "column_name",
+            "业务名称": "business_name",
+            "businessname": "business_name",
+            "数据类型": "data_type",
+            "datatype": "data_type",
             "同义词": "synonyms",
-            "业务描述": "business_description", "businessdesc": "business_description",
-            "description": "business_description", "desc": "business_description",
-            "字段注释": "column_comment", "columncomment": "column_comment",
+            "业务描述": "business_description",
+            "businessdesc": "business_description",
+            "description": "business_description",
+            "desc": "business_description",
+            "字段注释": "column_comment",
+            "columncomment": "column_comment",
             "创建时间": "create_time",
         }
         df = df.rename(columns=column_map)
@@ -204,17 +234,21 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
             if missing:
                 errors.append(f"Row {idx + 2}: missing {missing}")
                 continue
-            items.append(SemanticModelBatchImportItem(
-                table_name=str(row_dict["table_name"]).strip(),
-                column_name=str(row_dict["column_name"]).strip(),
-                business_name=str(row_dict["business_name"]).strip(),
-                data_type=str(row_dict["data_type"]).strip(),
-                synonyms=_to_str_or_none(row_dict.get("synonyms")),
-                business_description=_to_str_or_none(row_dict.get("business_description")),
-                column_comment=_to_str_or_none(row_dict.get("column_comment")),
-            ))
+            items.append(
+                SemanticModelBatchImportItem(
+                    table_name=str(row_dict["table_name"]).strip(),
+                    column_name=str(row_dict["column_name"]).strip(),
+                    business_name=str(row_dict["business_name"]).strip(),
+                    data_type=str(row_dict["data_type"]).strip(),
+                    synonyms=_to_str_or_none(row_dict.get("synonyms")),
+                    business_description=_to_str_or_none(row_dict.get("business_description")),
+                    column_comment=_to_str_or_none(row_dict.get("column_comment")),
+                )
+            )
         if not items:
-            return BatchImportResult(total=len(df), success_count=0, fail_count=len(errors), errors=errors)
+            return BatchImportResult(
+                total=len(df), success_count=0, fail_count=len(errors), errors=errors
+            )
         result = self.batch_import(db, agent_id=agent_id, items=items)
         result.errors.extend(errors)
         result.fail_count += len(errors)
@@ -222,10 +256,20 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
 
     def generate_template_bytes(self) -> bytes:
         from openpyxl import Workbook
+
         wb = Workbook()
         ws = wb.active
         ws.title = "semantic_model_template"
-        headers = ["表名*", "字段名*", "业务名称*", "数据类型*", "同义词", "业务描述", "字段注释", "创建时间"]
+        headers = [
+            "表名*",
+            "字段名*",
+            "业务名称*",
+            "数据类型*",
+            "同义词",
+            "业务描述",
+            "字段注释",
+            "创建时间",
+        ]
         ws.append(headers)
         ws.append(["orders", "amount", "订单金额", "decimal", "销售额,GMV", "订单金额", "", ""])
         ws.append(["users", "id", "用户ID", "bigint", "", "用户唯一标识", "", ""])
@@ -239,12 +283,13 @@ class CRUDAgentKnowledge(CRUDBase[AgentKnowledge, AgentKnowledgeCreate, AgentKno
     def get_multi_by_agent(
         self, db: Session, *, agent_id: int, skip: int = 0, limit: int = 100
     ) -> List[AgentKnowledge]:
-        return db.query(AgentKnowledge).filter(
-            and_(
-                AgentKnowledge.agent_id == agent_id,
-                AgentKnowledge.is_deleted == 0
-            )
-        ).offset(skip).limit(limit).all()
+        return (
+            db.query(AgentKnowledge)
+            .filter(and_(AgentKnowledge.agent_id == agent_id, AgentKnowledge.is_deleted == 0))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
     @staticmethod
     def _apply_defaults(obj_data: dict) -> dict:
@@ -265,11 +310,17 @@ class CRUDAgentKnowledge(CRUDBase[AgentKnowledge, AgentKnowledgeCreate, AgentKno
         return db_obj
 
     def create_with_file(
-        self, db: Session, *,
-        agent_id: int, title: str, type: str,
-        question: Optional[str], content: Optional[str],
-        is_recall: int, splitter_type: str,
-        upload_file: Optional[UploadFile]
+        self,
+        db: Session,
+        *,
+        agent_id: int,
+        title: str,
+        type: str,
+        question: Optional[str],
+        content: Optional[str],
+        is_recall: int,
+        splitter_type: str,
+        upload_file: Optional[UploadFile],
     ) -> AgentKnowledge:
         if type == "DOCUMENT":
             if not upload_file or not upload_file.filename:
@@ -388,16 +439,22 @@ class CRUDAgentKnowledge(CRUDBase[AgentKnowledge, AgentKnowledgeCreate, AgentKno
         return obj
 
 
-class CRUDAgentPresetQuestion(CRUDBase[AgentPresetQuestion, AgentPresetQuestionCreate, AgentPresetQuestionCreate]):
+class CRUDAgentPresetQuestion(
+    CRUDBase[AgentPresetQuestion, AgentPresetQuestionCreate, AgentPresetQuestionCreate]
+):
     def get_multi_by_agent(
         self, db: Session, *, agent_id: int, skip: int = 0, limit: int = 100
     ) -> List[AgentPresetQuestion]:
-        return db.query(AgentPresetQuestion).filter(
-            and_(
-                AgentPresetQuestion.agent_id == agent_id,
-                AgentPresetQuestion.is_active == 1
+        return (
+            db.query(AgentPresetQuestion)
+            .filter(
+                and_(AgentPresetQuestion.agent_id == agent_id, AgentPresetQuestion.is_active == 1)
             )
-        ).order_by(AgentPresetQuestion.sort_order).offset(skip).limit(limit).all()
+            .order_by(AgentPresetQuestion.sort_order)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
 
 def _to_str_or_none(value) -> Optional[str]:

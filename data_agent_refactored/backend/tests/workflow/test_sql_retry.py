@@ -1,5 +1,6 @@
 """Unit tests for the SQL self-healing router functions (semantic + execute
 retry loops) and the global sql_generate_count cap."""
+
 import pytest
 
 from app.workflow.graph import (

@@ -35,7 +35,9 @@ async def table_relation_node(
 
     agent_datasource = resolve_agent_datasource(db, agent_id)
     datasource_id = agent_datasource.datasource_id if agent_datasource else None
-    _, datasource_type = get_datasource_url_and_dialect(db, agent_datasource) if agent_datasource else (None, None)
+    _, datasource_type = (
+        get_datasource_url_and_dialect(db, agent_datasource) if agent_datasource else (None, None)
+    )
     dialect = map_dialect_to_sql_dialect(datasource_type)
 
     schema = build_schema_from_documents(
@@ -55,12 +57,14 @@ async def table_relation_node(
             if relation.source_table_name in table_names:
                 for table in schema.tables:
                     if table.name == relation.source_table_name:
-                        table.foreign_keys.append({
-                            "source_column": relation.source_column_name,
-                            "target_table": relation.target_table_name,
-                            "target_column": relation.target_column_name,
-                            "relation_type": relation.relation_type,
-                        })
+                        table.foreign_keys.append(
+                            {
+                                "source_column": relation.source_column_name,
+                                "target_table": relation.target_table_name,
+                                "target_column": relation.target_column_name,
+                                "relation_type": relation.relation_type,
+                            }
+                        )
 
     # Load semantic models for recalled tables.
     semantic_model_text = ""

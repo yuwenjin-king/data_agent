@@ -23,7 +23,9 @@ def upload_dir(tmp_path):
 def _make_excel_bytes(rows: list) -> bytes:
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.append(["表名*", "字段名*", "业务名称*", "数据类型*", "同义词", "业务描述", "字段注释", "创建时间"])
+    ws.append(
+        ["表名*", "字段名*", "业务名称*", "数据类型*", "同义词", "业务描述", "字段注释", "创建时间"]
+    )
     for row in rows:
         ws.append(row)
     buf = io.BytesIO()
@@ -144,6 +146,7 @@ def test_semantic_model_batch_delete(client, db_session):
         ids.append(response.json()["data"]["id"])
 
     import json as _json
+
     delete_response = client.request(
         "DELETE",
         "/api/v1/knowledge/semantic-models/batch",
@@ -279,16 +282,24 @@ def test_semantic_model_excel_import(client, db_session):
         json={"agent_id": agent_id, "datasource_id": datasource_id, "is_active": 1},
     )
 
-    excel_bytes = _make_excel_bytes([
-        ["orders", "amount", "订单金额", "decimal", "GMV", "", "", ""],
-        ["users", "id", "用户ID", "bigint", "", "", "", ""],
-        ["", "missing", "", "", "", "", "", ""],
-    ])
+    excel_bytes = _make_excel_bytes(
+        [
+            ["orders", "amount", "订单金额", "decimal", "GMV", "", "", ""],
+            ["users", "id", "用户ID", "bigint", "", "", "", ""],
+            ["", "missing", "", "", "", "", "", ""],
+        ]
+    )
 
     response = client.post(
         "/api/v1/knowledge/semantic-models/import/excel",
         data={"agent_id": agent_id},
-        files={"file": ("test.xlsx", io.BytesIO(excel_bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        files={
+            "file": (
+                "test.xlsx",
+                io.BytesIO(excel_bytes),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
     )
     assert response.status_code == 200
     result = response.json()["data"]
@@ -464,7 +475,9 @@ def test_agent_knowledge_retry_embedding_success(client, db_session):
     )
     knowledge_id = create_response.json()["data"]["id"]
 
-    retry_response = client.post(f"/api/v1/knowledge/agent-knowledge/{knowledge_id}/retry-embedding")
+    retry_response = client.post(
+        f"/api/v1/knowledge/agent-knowledge/{knowledge_id}/retry-embedding"
+    )
     assert retry_response.status_code == 200
     data = retry_response.json()["data"]
     assert data["embedding_status"] == "COMPLETED"
@@ -472,7 +485,9 @@ def test_agent_knowledge_retry_embedding_success(client, db_session):
 
 
 def test_agent_knowledge_retry_embedding_rejects_processing(client, db_session):
-    agent_id = client.post("/api/v1/agents", json={"name": "ak-processing-agent"}).json()["data"]["id"]
+    agent_id = client.post("/api/v1/agents", json={"name": "ak-processing-agent"}).json()["data"][
+        "id"
+    ]
     create_response = client.post(
         "/api/v1/knowledge/agent-knowledge",
         json={
@@ -486,16 +501,21 @@ def test_agent_knowledge_retry_embedding_rejects_processing(client, db_session):
     knowledge_id = create_response.json()["data"]["id"]
 
     from app.models.knowledge import AgentKnowledge
+
     row = db_session.query(AgentKnowledge).filter(AgentKnowledge.id == knowledge_id).first()
     row.embedding_status = "PROCESSING"
     db_session.commit()
 
-    retry_response = client.post(f"/api/v1/knowledge/agent-knowledge/{knowledge_id}/retry-embedding")
+    retry_response = client.post(
+        f"/api/v1/knowledge/agent-knowledge/{knowledge_id}/retry-embedding"
+    )
     assert retry_response.status_code == 400
 
 
 def test_agent_knowledge_retry_embedding_rejects_not_recall(client, db_session):
-    agent_id = client.post("/api/v1/agents", json={"name": "ak-norecall-agent"}).json()["data"]["id"]
+    agent_id = client.post("/api/v1/agents", json={"name": "ak-norecall-agent"}).json()["data"][
+        "id"
+    ]
     create_response = client.post(
         "/api/v1/knowledge/agent-knowledge",
         json={
@@ -513,5 +533,7 @@ def test_agent_knowledge_retry_embedding_rejects_not_recall(client, db_session):
         json={"is_recall": 0},
     )
 
-    retry_response = client.post(f"/api/v1/knowledge/agent-knowledge/{knowledge_id}/retry-embedding")
+    retry_response = client.post(
+        f"/api/v1/knowledge/agent-knowledge/{knowledge_id}/retry-embedding"
+    )
     assert retry_response.status_code == 400

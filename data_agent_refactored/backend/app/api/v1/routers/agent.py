@@ -46,7 +46,7 @@ def list_agents(
     page_size: int = 20,
     status: str = None,
     keyword: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     skip = (page - 1) * page_size
     if keyword:
@@ -128,7 +128,7 @@ def delete_api_key(agent_id: int, db: Session = Depends(get_db)):
 def set_api_key_enabled(
     agent_id: int,
     enabled: bool = Query(..., description="true to enable, false to disable"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     agent = agent_crud.set_api_key_enabled(db, agent_id=agent_id, enabled=1 if enabled else 0)
     if not agent:
@@ -140,38 +140,34 @@ def set_api_key_enabled(
 
 
 @router.post("/{agent_id}/datasources/init-schema", response_model=ApiResponse[List[str]])
-def init_agent_schema(
-    agent_id: int,
-    request: InitSchemaRequest,
-    db: Session = Depends(get_db)
-):
+def init_agent_schema(agent_id: int, request: InitSchemaRequest, db: Session = Depends(get_db)):
     agent = agent_crud.get(db, id=agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    link = agent_datasource_crud.init_schema(
-        db, agent_id=agent_id, table_names=request.table_names
-    )
+    link = agent_datasource_crud.init_schema(db, agent_id=agent_id, table_names=request.table_names)
     if not link:
         raise HTTPException(status_code=404, detail="No datasource linked to this agent")
 
     url, _ = get_datasource_url_and_dialect(db, link)
     if url:
-        asyncio.run(index_schema_documents(
-            db=db,
-            datasource_id=link.datasource_id,
-            url=url,
-            agent_id=agent_id,
-            table_names=request.table_names,
-        ))
+        asyncio.run(
+            index_schema_documents(
+                db=db,
+                datasource_id=link.datasource_id,
+                url=url,
+                agent_id=agent_id,
+                table_names=request.table_names,
+            )
+        )
 
     return ApiResponse(data=request.table_names)
 
 
-@router.post("/{agent_id}/business-knowledge", response_model=ApiResponse[BusinessKnowledgeResponse])
+@router.post(
+    "/{agent_id}/business-knowledge", response_model=ApiResponse[BusinessKnowledgeResponse]
+)
 def create_business_knowledge(
-    agent_id: int,
-    knowledge_in: BusinessKnowledgeCreate,
-    db: Session = Depends(get_db)
+    agent_id: int, knowledge_in: BusinessKnowledgeCreate, db: Session = Depends(get_db)
 ):
     agent = agent_crud.get(db, id=agent_id)
     if not agent:
@@ -182,10 +178,9 @@ def create_business_knowledge(
     return ApiResponse(data=BusinessKnowledgeResponse.model_validate(knowledge))
 
 
-@router.get("/{agent_id}/business-knowledge", response_model=ApiResponse[List[BusinessKnowledgeResponse]])
-def list_business_knowledge(
-    agent_id: int,
-    db: Session = Depends(get_db)
-):
+@router.get(
+    "/{agent_id}/business-knowledge", response_model=ApiResponse[List[BusinessKnowledgeResponse]]
+)
+def list_business_knowledge(agent_id: int, db: Session = Depends(get_db)):
     knowledge_list = business_knowledge_crud.get_multi_by_agent(db, agent_id=agent_id)
     return ApiResponse(data=[BusinessKnowledgeResponse.model_validate(k) for k in knowledge_list])

@@ -12,7 +12,7 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description="Data Agent API - 智能数据分析师",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 app.add_middleware(
@@ -47,7 +47,7 @@ async def root():
     return {
         "message": "Welcome to Data Agent API",
         "version": settings.APP_VERSION,
-        "docs": "/docs"
+        "docs": "/docs",
     }
 
 
@@ -58,9 +58,5 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

@@ -29,7 +29,7 @@ def build_multi_turn_context(db: Session, session_id: str, max_turns: int = 10) 
         return ""
     # Keep last N user/assistant pairs.
     relevant = [m for m in messages if m.role in ("user", "assistant")]
-    relevant = relevant[-(max_turns * 2):]
+    relevant = relevant[-(max_turns * 2) :]
     lines = []
     for m in relevant:
         prefix = "用户" if m.role == "user" else "AI"
@@ -118,7 +118,11 @@ async def run_chat_workflow(
                     sql_events.append(sql_out)
                     yield sql_event(sql=sql_out)
                 exec_out = update.get("sql_execute_node_output")
-                if isinstance(exec_out, dict) and "error" not in exec_out and exec_out.get("result"):
+                if (
+                    isinstance(exec_out, dict)
+                    and "error" not in exec_out
+                    and exec_out.get("result")
+                ):
                     sql_result_events.append(exec_out)
                     yield sql_result_event(
                         result=exec_out.get("result"),

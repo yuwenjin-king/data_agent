@@ -1,5 +1,6 @@
 """Security tests: ModelConfig secrets are encrypted at rest, decrypted on use,
 masked in responses; maybe_decrypt tolerates legacy plaintext."""
+
 from app.models.chat import ModelConfig
 from app.schemas.chat import ModelConfigCreate
 from app.services.chat_service import model_config_crud
