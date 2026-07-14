@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from typing import Any, AsyncIterable, Dict, Optional
 
@@ -21,6 +22,8 @@ from app.workflow.graph import build_workflow_graph
 from app.workflow.llm.registry import get_chat_client, get_embedding_client
 from app.workflow.state import WorkflowState
 from app.workflow.vectorstore.store import get_vector_store
+
+logger = logging.getLogger("app.workflow.service")
 
 
 def build_multi_turn_context(db: Session, session_id: str, max_turns: int = 10) -> str:
@@ -74,6 +77,10 @@ async def run_chat_workflow(
     )
 
     yield session_event(session_id=session_id, thread_id=thread_id)
+    logger.info(
+        "workflow.start",
+        extra={"agent_id": agent_id, "session_id": session_id, "thread_id": thread_id},
+    )
 
     llm_client = get_chat_client(db)
     embedding_client = get_embedding_client(db)
@@ -139,6 +146,10 @@ async def run_chat_workflow(
                 yield node_complete_event(node=node_name)
     except Exception as exc:
         error_message = str(exc)
+        logger.exception(
+            "workflow.error",
+            extra={"agent_id": agent_id, "session_id": session_id},
+        )
         yield error_event(message=error_message)
 
     if error_message:
@@ -173,6 +184,15 @@ async def run_chat_workflow(
     )
 
     yield done_event()
+    logger.info(
+        "workflow.end",
+        extra={
+            "agent_id": agent_id,
+            "session_id": session_id,
+            "sql_steps": len(sql_events),
+            "has_error": bool(error_message),
+        },
+    )
 
     if assistant_message:
         yield f"event: assistant_message\ndata: {json.dumps({'message_id': assistant_message.id}, ensure_ascii=False)}\n\n"

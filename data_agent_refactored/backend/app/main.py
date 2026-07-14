@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,7 +7,12 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1 import api_router
 from app.core.config import settings
+from app.core.logging import setup_logging
 from app.schemas.common import ApiResponse
+
+setup_logging(level=settings.LOG_LEVEL)
+
+logger = logging.getLogger("app.main")
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -14,6 +21,8 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+logger.info("app.startup", extra={"app": settings.APP_NAME, "version": settings.APP_VERSION})
 
 app.add_middleware(
     CORSMiddleware,

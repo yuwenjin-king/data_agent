@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
 
+    # Logging
+    LOG_LEVEL: str = "INFO"
+
     # Database
     DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/data_agent"
 

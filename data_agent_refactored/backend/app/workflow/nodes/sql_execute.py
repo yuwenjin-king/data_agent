@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any, Dict, Optional
 
 from langchain_core.runnables import RunnableConfig
@@ -14,6 +15,8 @@ from app.workflow.sql.utils import (
     resolve_agent_datasource,
 )
 from app.workflow.state import SqlRetryReason, WorkflowState
+
+logger = logging.getLogger("app.workflow.sql_execute")
 
 
 async def sql_execute_node(
@@ -53,10 +56,21 @@ async def sql_execute_node(
             max_rows=settings.MAX_SQL_ROWS,
         )
     except SqlExecutionError as exc:
+        logger.warning("sql.error", extra={"agent_id": agent_id, "reason": str(exc)})
         return {
             "sql_regenerate_reason": SqlRetryReason(kind="sql_execute", reason=str(exc)),
             "sql_execute_node_output": {"error": str(exc)},
         }
+
+    logger.info(
+        "sql.execute",
+        extra={
+            "agent_id": agent_id,
+            "row_count": result.get("row_count"),
+            "elapsed_seconds": result.get("elapsed_seconds"),
+            "truncated": result.get("truncated"),
+        },
+    )
 
     # Generate chart config if LLM is available.
     display_style = None

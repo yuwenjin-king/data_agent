@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from typing import Optional
 
 from langchain_core.runnables import RunnableConfig
@@ -7,6 +8,8 @@ from langchain_core.runnables import RunnableConfig
 from app.core.config import settings
 from app.workflow.code.executor import CodeResult, CodeSecurityError, get_code_executor
 from app.workflow.state import WorkflowState
+
+logger = logging.getLogger("app.workflow.python_execute")
 
 
 async def python_execute_node(
@@ -26,6 +29,15 @@ async def python_execute_node(
         )
     except CodeSecurityError as exc:
         result = CodeResult(success=False, exception=str(exc))
+
+    logger.info(
+        "python.execute",
+        extra={
+            "success": result.success,
+            "tries": tries,
+            "fallback": tries >= settings.PYTHON_MAX_TRIES,
+        },
+    )
 
     if result.success:
         return {
