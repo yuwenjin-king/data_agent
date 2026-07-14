@@ -112,7 +112,7 @@ async def chitchat_response(
     }
 
 
-def build_workflow_graph() -> StateGraph:
+def build_workflow_graph():
     graph = StateGraph(WorkflowState)
     graph.add_node("intent_recognition", intent_recognition_node)
     graph.add_node("chitchat", chitchat_response)

@@ -80,7 +80,7 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
     def _resolve_active_datasource_id(self, db: Session, agent_id: int) -> int:
         link = agent_datasource_crud.get_active_by_agent(db, agent_id=agent_id)
         if link:
-            return link.datasource_id
+            return link.datasource_id  # type: ignore[return-value]  # ORM Column[int]
         link = (
             db.query(agent_datasource_crud.model)
             .filter(agent_datasource_crud.model.agent_id == agent_id)
@@ -88,7 +88,7 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
             .first()
         )
         if link:
-            return link.datasource_id
+            return link.datasource_id  # type: ignore[return-value]  # ORM Column[int]
         raise ValueError(f"No datasource found for agent {agent_id}")
 
     def create(self, db: Session, obj_in: SemanticModelCreate) -> SemanticModel:

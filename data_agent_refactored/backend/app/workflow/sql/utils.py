@@ -28,7 +28,7 @@ def get_datasource_url_and_dialect(
         password=password,
         connection_url=datasource.connection_url,
     )
-    return url, datasource.type
+    return url, datasource.type  # type: ignore[return-value]  # ORM Column[str]
 
 
 def map_dialect_to_sql_dialect(datasource_type: Optional[str]) -> str:

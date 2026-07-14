@@ -96,7 +96,7 @@ class CRUDAgent(CRUDBase[Agent, AgentCreate, AgentUpdate]):
             return None, None
         from app.utils.crypto import maybe_decrypt
 
-        return mask_api_key(maybe_decrypt(agent.api_key)), agent.api_key_enabled
+        return mask_api_key(maybe_decrypt(agent.api_key)), agent.api_key_enabled  # type: ignore[return-value]  # ORM Column[int]
 
 
 class CRUDBusinessKnowledge(

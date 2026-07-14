@@ -45,7 +45,7 @@ class LLMClient:
         max_tokens: Optional[int] = None,
         **kwargs: Any,
     ) -> str:
-        response = await self.client.chat.completions.create(
+        response = await self.client.chat.completions.create(  # type: ignore[call-overload]  # ORM Column config attrs
             model=self.model_name,
             messages=messages,  # type: ignore[arg-type]
             temperature=temperature if temperature is not None else self.config.temperature,
@@ -61,7 +61,7 @@ class LLMClient:
         max_tokens: Optional[int] = None,
         **kwargs: Any,
     ) -> AsyncIterable[str]:
-        stream = await self.client.chat.completions.create(
+        stream = await self.client.chat.completions.create(  # type: ignore[call-overload]  # ORM Column config attrs
             model=self.model_name,
             messages=messages,  # type: ignore[arg-type]
             temperature=temperature if temperature is not None else self.config.temperature,
@@ -88,4 +88,4 @@ class LLMClient:
 
     @property
     def provider(self) -> str:
-        return self.config.provider
+        return self.config.provider  # type: ignore[return-value]  # ORM Column[str]

@@ -85,6 +85,8 @@ async def run_chat_workflow(
     llm_client = get_chat_client(db)
     embedding_client = get_embedding_client(db)
     vector_store = get_vector_store()
+    # session_id is resolved (existing or newly created) above; narrow for type safety.
+    assert session_id is not None
     multi_turn = build_multi_turn_context(db, session_id, max_turns=settings.MULTI_TURN_MAX_TURNS)
 
     initial_state: WorkflowState = {

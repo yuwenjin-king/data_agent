@@ -56,7 +56,7 @@ async def table_relation_node(
         for relation in relations:
             if relation.source_table_name in table_names:
                 for table in schema.tables:
-                    if table.name == relation.source_table_name:
+                    if table.name == relation.source_table_name and table.foreign_keys is not None:
                         table.foreign_keys.append(
                             {
                                 "source_column": relation.source_column_name,
