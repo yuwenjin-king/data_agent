@@ -157,13 +157,25 @@ intent → evidence_recall → query_enhance → schema_recall → table_relatio
 - `human_feedback`（基于 interrupt 的 Plan 人工审批，需恢复 API + 前端 UI）——本轮明确不做。
 - Python 沙箱生产级隔离：当前本地执行器为纵深防御（超时 + rlimit + 脱敏 + AST 守卫），非真正沙箱；生产需接 Docker（`CODE_EXECUTOR_TYPE=docker`，现为 `NotImplementedError` 桩）或 nsjail。
 
-### P4 生产化 — ⬜ 未开始
+### P4 生产化 — 🟡 大部分完成（722d345 / ec36c0b / f83d379 / 1d62432 / b1d1fe6 / 7d5053a），仅 Docker 全栈待补
 
-见上文 P4 任务清单（CI、Docker Compose、lint、加密脱敏、结构化日志）。
+已完成：
+
+- **CI（GitHub Actions）**：`ruff check` → `ruff format --check` → `mypy app` → `pytest` → 前端 `npm build`，每次推送/PR 自动跑。
+- **工具链**：ruff（lint + format）、mypy（pydantic 插件；Column 噪声码暂关，待模型迁移 `Mapped[...]` 后重开）、pytest（`pythonpath` 配置，bare pytest 可跑）。
+- **安全**：ModelConfig 的 LLM `api_key`/`proxy_password` 加密存储 + 用时解密 + 响应脱敏；`maybe_decrypt` 容错兼容历史明文。
+- **文件上传**：扩展名白名单、流式大小检查（DoS 防护）、UUID 存储名、健壮路径穿越校验（`relative_to`）；`import_excel` 强制 `.xlsx`。
+- **结构化日志**：JSON 行格式 + workflow/SQL/Python 关键路径埋点 + `LOG_LEVEL` 配置。
+- **执行安全边界**：SQL 只读校验（已有）；Python 本地沙箱（AST 守卫 + POSIX rlimit + 环境脱敏 + 超时）。
+
+待补：
+
+- Docker Compose 全栈（MySQL + 后端 + 前端）+ Dockerfile + 环境变量模板（本机 Docker 不可用，需本地验证）。
+- 认证授权（目前无 auth 中间件）、运行指标（metrics endpoint）、前端 ESLint/Prettier 与前端测试。
 
 ## 下一步执行顺序
 
 1. ~~SQL 自愈闭环 + 可行性网关~~（已完成，b42fbdf）。
 2. ~~plan-driven 多步架构 + Python 分析沙箱~~（已完成，550a9c9 / 36b4107）。
 3. （可选）`human_feedback` 人工审批，或 Python 沙箱接 Docker。
-4. 进入 P4 生产化，或继续按需补端到端用例（多步 SQL+Python 混合计划的真实 LLM 集成测试）。
+4. ~~进入 P4 生产化~~（CI/lint/mypy/加密脱敏/上传安全/结构化日志 已落地）；剩余 Docker 全栈、auth、metrics、前端测试待补。
