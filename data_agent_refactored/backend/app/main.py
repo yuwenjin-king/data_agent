@@ -65,6 +65,32 @@ async def health_check():
     return {"status": "healthy"}
 
 
+@app.on_event("startup")
+def seed_admin_user():
+    """Seed a superuser from ADMIN_USERNAME/ADMIN_PASSWORD when auth is enabled."""
+    if not settings.AUTH_ENABLED or not settings.ADMIN_PASSWORD:
+        return
+    from app.core.database import SessionLocal
+    from app.core.security import hash_password
+    from app.models.user import User
+
+    db = SessionLocal()
+    try:
+        if db.query(User).count() == 0:
+            db.add(
+                User(
+                    username=settings.ADMIN_USERNAME,
+                    hashed_password=hash_password(settings.ADMIN_PASSWORD),
+                    is_active=1,
+                    is_superuser=1,
+                )
+            )
+            db.commit()
+            logger.info("auth.admin_seeded", extra={"username": settings.ADMIN_USERNAME})
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
     import uvicorn
 

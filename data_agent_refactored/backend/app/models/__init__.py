@@ -7,6 +7,7 @@ from app.models.datasource import (
     LogicalRelation,
 )
 from app.models.knowledge import AgentKnowledge, AgentPresetQuestion, SemanticModel
+from app.models.user import User
 
 __all__ = [
     "Agent",
@@ -22,4 +23,5 @@ __all__ = [
     "ChatMessage",
     "UserPromptConfig",
     "ModelConfig",
+    "User",
 ]

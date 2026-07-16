@@ -6,6 +6,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
+from app.core.auth import require_auth
 from app.core.database import get_db
 from app.models.chat import ChatMessage
 from app.schemas.chat import (
@@ -31,7 +32,10 @@ from app.services.chat_service import (
 )
 from app.services.workflow_service import run_chat_workflow
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+# Management/config routes require auth (no-op unless AUTH_ENABLED).
+router = APIRouter(prefix="/chat", tags=["chat"], dependencies=[Depends(require_auth)])
+# Open router for the agent-facing streaming endpoint (used via API key / internal).
+open_router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 def _parse_sse_payload(event: str) -> dict:
@@ -86,7 +90,7 @@ def list_messages(session_id: str, skip: int = 0, limit: int = 100, db: Session 
     return ApiResponse(data=[ChatMessageResponse.model_validate(m) for m in messages])
 
 
-@router.post("/completions")
+@open_router.post("/completions")
 async def chat_completion(request: ChatRequest, db: Session = Depends(get_db)):
     session_id = request.session_id
 

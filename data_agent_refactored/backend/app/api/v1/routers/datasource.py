@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth import require_auth
 from app.core.database import get_db
 from app.schemas.common import ApiResponse
 from app.schemas.datasource import (
@@ -22,7 +23,9 @@ from app.services.datasource_service import (
     logical_relation_crud,
 )
 
-router = APIRouter(prefix="/datasources", tags=["datasources"])
+router = APIRouter(
+    prefix="/datasources", tags=["datasources"], dependencies=[Depends(require_auth)]
+)
 
 
 @router.post("", response_model=ApiResponse[DatasourceResponse])

@@ -4,6 +4,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.auth import require_auth
 from app.core.database import get_db
 from app.schemas.agent import (
     AgentCreate,
@@ -20,7 +21,7 @@ from app.services.datasource_service import agent_datasource_crud
 from app.workflow.indexing import index_business_knowledge, index_schema_documents
 from app.workflow.sql.utils import get_datasource_url_and_dialect
 
-router = APIRouter(prefix="/agents", tags=["agents"])
+router = APIRouter(prefix="/agents", tags=["agents"], dependencies=[Depends(require_auth)])
 
 
 @router.post("", response_model=ApiResponse[AgentResponse])

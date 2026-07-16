@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.core.auth import require_auth
 from app.core.database import get_db
 from app.schemas.common import ApiResponse, PageResponse
 from app.schemas.knowledge import (
@@ -33,7 +34,7 @@ from app.workflow.indexing import (
     index_agent_knowledge,
 )
 
-router = APIRouter(prefix="/knowledge", tags=["knowledge"])
+router = APIRouter(prefix="/knowledge", tags=["knowledge"], dependencies=[Depends(require_auth)])
 
 
 # ---------------------------------------------------------------------------
