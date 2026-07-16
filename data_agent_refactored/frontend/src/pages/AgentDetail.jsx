@@ -1,39 +1,21 @@
-import React, { useEffect, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
-import {
-  Card,
-  Tabs,
-  Button,
-  Space,
-  Table,
-  Form,
-  Input,
-  Select,
-  Modal,
-  message,
-  Popconfirm,
-  Divider,
-} from 'antd'
-import { ArrowLeftOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons'
-import {
-  agentService,
-  datasourceService,
-  knowledgeService,
-} from '../services'
+import { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import { Card, Tabs, Button, Space, Table, Form, Input, Select, Modal, message } from 'antd'
+import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons'
+import { agentService, datasourceService, knowledgeService } from '../services'
 
 const { Option } = Select
 const { TextArea } = Input
 
 function AgentDetail() {
   const { id } = useParams()
-  const navigate = useNavigate()
   const [agent, setAgent] = useState(null)
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('basic')
 
   const [businessKnowledge, setBusinessKnowledge] = useState([])
   const [semanticModels, setSemanticModels] = useState([])
-  const [agentKnowledge, setAgentKnowledge] = useState([])
+  const [, setAgentKnowledge] = useState([])
   const [presetQuestions, setPresetQuestions] = useState([])
   const [agentDatasources, setAgentDatasources] = useState([])
   const [allDatasources, setAllDatasources] = useState([])
@@ -49,6 +31,8 @@ function AgentDetail() {
       fetchAllDatasources()
       fetchRelatedData()
     }
+    // Fetch on agent (route param) change only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const fetchAgent = async () => {
@@ -122,7 +106,12 @@ function AgentDetail() {
     { title: '业务名词', dataIndex: 'business_term', key: 'business_term' },
     { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
     { title: '同义词', dataIndex: 'synonyms', key: 'synonyms' },
-    { title: '是否召回', dataIndex: 'is_recall', key: 'is_recall', render: (v) => (v ? '是' : '否') },
+    {
+      title: '是否召回',
+      dataIndex: 'is_recall',
+      key: 'is_recall',
+      render: (v) => (v ? '是' : '否'),
+    },
   ]
 
   const smColumns = [
@@ -135,7 +124,12 @@ function AgentDetail() {
   const pqColumns = [
     { title: '问题', dataIndex: 'question', key: 'question' },
     { title: '排序', dataIndex: 'sort_order', key: 'sort_order' },
-    { title: '是否启用', dataIndex: 'is_active', key: 'is_active', render: (v) => (v ? '是' : '否') },
+    {
+      title: '是否启用',
+      dataIndex: 'is_active',
+      key: 'is_active',
+      render: (v) => (v ? '是' : '否'),
+    },
   ]
 
   const adColumns = [
@@ -144,11 +138,16 @@ function AgentDetail() {
       dataIndex: 'datasource_id',
       key: 'datasource_id',
       render: (id) => {
-        const ds = allDatasources.find(d => d.id === id)
+        const ds = allDatasources.find((d) => d.id === id)
         return ds?.name || id
       },
     },
-    { title: '是否激活', dataIndex: 'is_active', key: 'is_active', render: (v) => (v ? '是' : '否') },
+    {
+      title: '是否激活',
+      dataIndex: 'is_active',
+      key: 'is_active',
+      render: (v) => (v ? '是' : '否'),
+    },
   ]
 
   const tabItems = [
@@ -184,7 +183,11 @@ function AgentDetail() {
       children: (
         <Card
           extra={
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setDatasourceModalVisible(true)}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setDatasourceModalVisible(true)}
+            >
               关联数据源
             </Button>
           }
@@ -199,7 +202,11 @@ function AgentDetail() {
       children: (
         <Card
           extra={
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setKnowledgeModalVisible(true)}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setKnowledgeModalVisible(true)}
+            >
               添加业务知识
             </Button>
           }
@@ -247,11 +254,7 @@ function AgentDetail() {
         footer={null}
       >
         <Form form={form} layout="vertical" onFinish={handleAddKnowledge}>
-          <Form.Item
-            label="业务名词"
-            name="business_term"
-            rules={[{ required: true }]}
-          >
+          <Form.Item label="业务名词" name="business_term" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
           <Form.Item label="描述" name="description">
@@ -268,7 +271,9 @@ function AgentDetail() {
           </Form.Item>
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit">确定</Button>
+              <Button type="primary" htmlType="submit">
+                确定
+              </Button>
               <Button onClick={() => setKnowledgeModalVisible(false)}>取消</Button>
             </Space>
           </Form.Item>
@@ -282,20 +287,20 @@ function AgentDetail() {
         footer={null}
       >
         <Form form={form} layout="vertical" onFinish={handleLinkDatasource}>
-          <Form.Item
-            label="数据源"
-            name="datasource_id"
-            rules={[{ required: true }]}
-          >
+          <Form.Item label="数据源" name="datasource_id" rules={[{ required: true }]}>
             <Select>
-              {allDatasources.map(ds => (
-                <Option key={ds.id} value={ds.id}>{ds.name}</Option>
+              {allDatasources.map((ds) => (
+                <Option key={ds.id} value={ds.id}>
+                  {ds.name}
+                </Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit">确定</Button>
+              <Button type="primary" htmlType="submit">
+                确定
+              </Button>
               <Button onClick={() => setDatasourceModalVisible(false)}>取消</Button>
             </Space>
           </Form.Item>

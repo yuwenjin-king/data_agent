@@ -7,7 +7,8 @@ export const agentService = {
   update: (id, data) => api.put(`/agents/${id}`, data),
   delete: (id) => api.delete(`/agents/${id}`),
   getBusinessKnowledge: (agentId) => api.get(`/agents/${agentId}/business-knowledge`),
-  createBusinessKnowledge: (agentId, data) => api.post(`/agents/${agentId}/business-knowledge`, { ...data, agent_id: agentId }),
+  createBusinessKnowledge: (agentId, data) =>
+    api.post(`/agents/${agentId}/business-knowledge`, { ...data, agent_id: agentId }),
 }
 
 export const datasourceService = {
@@ -18,7 +19,8 @@ export const datasourceService = {
   delete: (id) => api.delete(`/datasources/${id}`),
   linkAgent: (data) => api.post('/datasources/agent-datasources', data),
   getAgentDatasources: (agentId) => api.get(`/datasources/agent-datasources/agent/${agentId}`),
-  getLogicalRelations: (datasourceId) => api.get(`/datasources/logical-relations/datasource/${datasourceId}`),
+  getLogicalRelations: (datasourceId) =>
+    api.get(`/datasources/logical-relations/datasource/${datasourceId}`),
   createLogicalRelation: (data) => api.post('/datasources/logical-relations', data),
 }
 
@@ -53,7 +55,7 @@ export const chatService = {
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
 
-    while (true) {
+    for (;;) {
       const { done, value } = await reader.read()
       if (done) break
       buffer += decoder.decode(value, { stream: true })
@@ -86,7 +88,8 @@ export const chatService = {
 export const configService = {
   getPromptConfigs: (params) => api.get('/chat/prompt-configs', { params }),
   createPromptConfig: (data) => api.post('/chat/prompt-configs', data),
-  getModelConfigs: (modelType) => api.get('/chat/model-configs', { params: { model_type: modelType } }),
+  getModelConfigs: (modelType) =>
+    api.get('/chat/model-configs', { params: { model_type: modelType } }),
   createModelConfig: (data) => api.post('/chat/model-configs', data),
   updateModelConfig: (id, data) => api.put(`/chat/model-configs/${id}`, data),
 }

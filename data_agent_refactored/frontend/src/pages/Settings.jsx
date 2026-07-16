@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, Tabs, Table, Button, Space, Form, Input, Select, Modal, message } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { configService, datasourceService } from '../services'
@@ -99,7 +99,12 @@ function Settings() {
     { title: '模型名称', dataIndex: 'model_name', key: 'model_name' },
     { title: '类型', dataIndex: 'model_type', key: 'model_type' },
     { title: 'Base URL', dataIndex: 'base_url', key: 'base_url', ellipsis: true },
-    { title: '是否激活', dataIndex: 'is_active', key: 'is_active', render: (v) => (v ? '是' : '否') },
+    {
+      title: '是否激活',
+      dataIndex: 'is_active',
+      key: 'is_active',
+      render: (v) => (v ? '是' : '否'),
+    },
   ]
 
   const promptColumns = [
@@ -117,7 +122,11 @@ function Settings() {
       children: (
         <Card
           extra={
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setDatasourceModalVisible(true)}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setDatasourceModalVisible(true)}
+            >
               添加数据源
             </Button>
           }
@@ -132,7 +141,11 @@ function Settings() {
       children: (
         <Card
           extra={
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setModelModalVisible(true)}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setModelModalVisible(true)}
+            >
               添加模型配置
             </Button>
           }
@@ -147,7 +160,11 @@ function Settings() {
       children: (
         <Card
           extra={
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setPromptModalVisible(true)}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setPromptModalVisible(true)}
+            >
               添加 Prompt 配置
             </Button>
           }
@@ -202,7 +219,9 @@ function Settings() {
           </Form.Item>
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit">确定</Button>
+              <Button type="primary" htmlType="submit">
+                确定
+              </Button>
               <Button onClick={() => setDatasourceModalVisible(false)}>取消</Button>
             </Space>
           </Form.Item>
@@ -243,7 +262,9 @@ function Settings() {
           </Form.Item>
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit">确定</Button>
+              <Button type="primary" htmlType="submit">
+                确定
+              </Button>
               <Button onClick={() => setModelModalVisible(false)}>取消</Button>
             </Space>
           </Form.Item>
@@ -279,7 +300,9 @@ function Settings() {
           </Form.Item>
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit">确定</Button>
+              <Button type="primary" htmlType="submit">
+                确定
+              </Button>
               <Button onClick={() => setPromptModalVisible(false)}>取消</Button>
             </Space>
           </Form.Item>

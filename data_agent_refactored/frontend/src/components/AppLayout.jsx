@@ -9,7 +9,6 @@ import {
   MenuUnfoldOutlined,
 } from '@ant-design/icons'
 import { Link, useLocation } from 'react-router-dom'
-import { useAppStore } from '../store/appStore'
 
 const { Header, Sider, Content } = Layout
 
@@ -41,28 +40,29 @@ function AppLayout() {
   return (
     <Layout style={{ height: '100vh' }}>
       <Sider trigger={null} collapsible collapsed={collapsed}>
-        <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div
+          style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
           <h2 style={{ color: 'white', margin: 0, fontSize: collapsed ? 14 : 18 }}>
             {collapsed ? 'DA' : 'Data Agent'}
           </h2>
         </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          items={menuItems}
-        />
+        <Menu theme="dark" mode="inline" selectedKeys={[location.pathname]} items={menuItems} />
       </Sider>
       <Layout>
-        <Header style={{ padding: '0 16px', background: colorBgContainer, display: 'flex', alignItems: 'center' }}>
-          {React.createElement(
-            collapsed ? MenuUnfoldOutlined : MenuFoldOutlined,
-            {
-              className: 'trigger',
-              onClick: () => setCollapsed(!collapsed),
-              style: { fontSize: 16, cursor: 'pointer', transition: 'color 0.3s' },
-            }
-          )}
+        <Header
+          style={{
+            padding: '0 16px',
+            background: colorBgContainer,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {React.createElement(collapsed ? MenuUnfoldOutlined : MenuFoldOutlined, {
+            className: 'trigger',
+            onClick: () => setCollapsed(!collapsed),
+            style: { fontSize: 16, cursor: 'pointer', transition: 'color 0.3s' },
+          })}
         </Header>
         <Content
           style={{

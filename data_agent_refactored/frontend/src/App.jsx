@@ -1,6 +1,4 @@
-import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { Layout } from 'antd'
 import AppLayout from './components/AppLayout'
 import Dashboard from './pages/Dashboard'
 import Agents from './pages/Agents'

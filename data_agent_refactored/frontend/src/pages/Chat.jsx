@@ -1,18 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import {
-  Layout,
-  List,
-  Input,
-  Button,
-  Card,
-  Space,
-  Avatar,
-  Spin,
-  Empty,
-  Tag,
-  Divider,
-} from 'antd'
+import { Layout, List, Input, Button, Card, Space, Avatar, Spin, Empty, Divider } from 'antd'
 import {
   SendOutlined,
   RobotOutlined,
@@ -21,10 +9,8 @@ import {
   PlusOutlined,
 } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
-import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import { chatService, agentService } from '../services'
-import { useAppStore } from '../store/appStore'
 
 const { Sider, Content } = Layout
 const { TextArea } = Input
@@ -46,6 +32,8 @@ function Chat() {
       fetchAgent()
       fetchSessions()
     }
+    // Fetch on agent (route param) change only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentId])
 
   useEffect(() => {
@@ -114,7 +102,7 @@ function Chat() {
       create_time: new Date().toISOString(),
     }
 
-    setMessages(prev => [...prev, userMessage])
+    setMessages((prev) => [...prev, userMessage])
     setInputMessage('')
     setLoading(true)
 
@@ -126,7 +114,7 @@ function Chat() {
       message_type: 'text',
       create_time: new Date().toISOString(),
     }
-    setMessages(prev => [...prev, assistantMessage])
+    setMessages((prev) => [...prev, assistantMessage])
 
     try {
       let sessionId = currentSession.id
@@ -140,38 +128,38 @@ function Chat() {
           if (event.event === 'session' && event.data.session_id) {
             sessionId = event.data.session_id
             if (sessionId !== currentSession.id) {
-              setCurrentSession(prev => ({ ...prev, id: sessionId }))
+              setCurrentSession((prev) => ({ ...prev, id: sessionId }))
             }
           }
           if (event.event === 'message' && typeof event.data.text === 'string') {
-            setMessages(prev =>
+            setMessages((prev) =>
               prev.map((msg, idx) =>
                 idx === prev.length - 1 && msg.role === 'assistant'
                   ? { ...msg, content: event.data.text }
-                  : msg
-              )
+                  : msg,
+              ),
             )
           }
           if (event.event === 'sql' && event.data.sql) {
             const sqlBlock = `\n\n**生成 SQL：**\n\`\`\`sql\n${event.data.sql}\n\`\`\``
-            setMessages(prev =>
+            setMessages((prev) =>
               prev.map((msg, idx) =>
                 idx === prev.length - 1 && msg.role === 'assistant'
                   ? { ...msg, content: msg.content + sqlBlock }
-                  : msg
-              )
+                  : msg,
+              ),
             )
           }
-        }
+        },
       )
     } catch (error) {
       console.error('Failed to send message:', error)
-      setMessages(prev =>
+      setMessages((prev) =>
         prev.map((msg, idx) =>
           idx === prev.length - 1 && msg.role === 'assistant'
             ? { ...msg, content: '抱歉，发生了错误，请稍后重试。' }
-            : msg
-        )
+            : msg,
+        ),
       )
     } finally {
       setLoading(false)
@@ -186,7 +174,7 @@ function Chat() {
   }
 
   const components = {
-    code({ node, inline, className, children, ...props }) {
+    code({ inline, className, children, ...props }) {
       const match = /language-(\w+)/.exec(className || '')
       return !inline && match ? (
         <pre className={className} {...props}>
@@ -229,7 +217,14 @@ function Chat() {
               }}
               onClick={() => selectSession(session)}
             >
-              <div style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div
+                style={{
+                  width: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {session.title}
               </div>
             </List.Item>
@@ -248,10 +243,7 @@ function Chat() {
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
           {messages.length === 0 ? (
-            <Empty
-              description="开始一段对话吧"
-              style={{ marginTop: 100 }}
-            />
+            <Empty description="开始一段对话吧" style={{ marginTop: 100 }} />
           ) : (
             <div style={{ maxWidth: 900, margin: '0 auto' }}>
               {messages.map((msg) => (

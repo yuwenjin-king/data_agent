@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, Row, Col, Statistic, Spin, Alert } from 'antd'
 import {
   RobotOutlined,
@@ -6,7 +6,7 @@ import {
   MessageOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
-import { agentService, datasourceService, chatService } from '../services'
+import { agentService, datasourceService } from '../services'
 
 function Dashboard() {
   const [stats, setStats] = useState({ agents: 0, datasources: 0, sessions: 0, messages: 0 })
@@ -37,7 +37,12 @@ function Dashboard() {
   }
 
   if (loading) {
-    return <Spin size="large" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }} />
+    return (
+      <Spin
+        size="large"
+        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}
+      />
+    )
   }
 
   return (
@@ -53,38 +58,22 @@ function Dashboard() {
       <Row gutter={16}>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="智能体数量"
-              value={stats.agents}
-              prefix={<RobotOutlined />}
-            />
+            <Statistic title="智能体数量" value={stats.agents} prefix={<RobotOutlined />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="数据源数量"
-              value={stats.datasources}
-              prefix={<DatabaseOutlined />}
-            />
+            <Statistic title="数据源数量" value={stats.datasources} prefix={<DatabaseOutlined />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="会话数量"
-              value={stats.sessions}
-              prefix={<MessageOutlined />}
-            />
+            <Statistic title="会话数量" value={stats.sessions} prefix={<MessageOutlined />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="消息数量"
-              value={stats.messages}
-              prefix={<ThunderboltOutlined />}
-            />
+            <Statistic title="消息数量" value={stats.messages} prefix={<ThunderboltOutlined />} />
           </Card>
         </Col>
       </Row>

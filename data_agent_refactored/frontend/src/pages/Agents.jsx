@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Card,
   Table,
@@ -46,12 +46,6 @@ function Agents() {
   const handleAdd = () => {
     setEditingAgent(null)
     form.resetFields()
-    setModalVisible(true)
-  }
-
-  const handleEdit = (agent) => {
-    setEditingAgent(agent)
-    form.setFieldsValue(agent)
     setModalVisible(true)
   }
 
@@ -157,12 +151,7 @@ function Agents() {
         </Button>
       </div>
       <Card>
-        <Table
-          columns={columns}
-          dataSource={agents}
-          rowKey="id"
-          loading={loading}
-        />
+        <Table columns={columns} dataSource={agents} rowKey="id" loading={loading} />
       </Card>
 
       <Modal
@@ -172,11 +161,7 @@ function Agents() {
         footer={null}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item
-            label="名称"
-            name="name"
-            rules={[{ required: true, message: '请输入名称' }]}
-          >
+          <Form.Item label="名称" name="name" rules={[{ required: true, message: '请输入名称' }]}>
             <Input placeholder="请输入智能体名称" />
           </Form.Item>
           <Form.Item label="描述" name="description">
