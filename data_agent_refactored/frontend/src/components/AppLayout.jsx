@@ -1,23 +1,32 @@
 import React, { useState } from 'react'
-import { Outlet } from 'react-router-dom'
-import { Layout, Menu, theme } from 'antd'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Button, Layout, Menu, theme } from 'antd'
 import {
   DashboardOutlined,
-  RobotOutlined,
-  SettingOutlined,
+  LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  RobotOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
-import { Link, useLocation } from 'react-router-dom'
+import { useAuthStore } from '../store/authStore'
 
 const { Header, Sider, Content } = Layout
 
 function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+  const logout = useAuthStore((s) => s.logout)
+  const authEnabled = useAuthStore((s) => s.authEnabled)
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
 
   const menuItems = [
     {
@@ -56,6 +65,7 @@ function AppLayout() {
             background: colorBgContainer,
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
           {React.createElement(collapsed ? MenuUnfoldOutlined : MenuFoldOutlined, {
@@ -63,6 +73,11 @@ function AppLayout() {
             onClick: () => setCollapsed(!collapsed),
             style: { fontSize: 16, cursor: 'pointer', transition: 'color 0.3s' },
           })}
+          {authEnabled ? (
+            <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
+              退出登录
+            </Button>
+          ) : null}
         </Header>
         <Content
           style={{

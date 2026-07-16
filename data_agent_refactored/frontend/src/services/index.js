@@ -1,5 +1,14 @@
 import api from './api'
 
+export const authService = {
+  status: () => api.get('/auth/status'),
+  login: (username, password) =>
+    api.post('/auth/login', new URLSearchParams({ username, password }), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    }),
+  me: () => api.get('/auth/me'),
+}
+
 export const agentService = {
   getAll: (params) => api.get('/agents', { params }),
   getById: (id) => api.get(`/agents/${id}`),
