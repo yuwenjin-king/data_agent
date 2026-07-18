@@ -3,11 +3,12 @@ import logging
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from app.api.v1 import api_router
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.core.metrics import record_request, render_prometheus
 from app.schemas.common import ApiResponse
 
 setup_logging(level=settings.LOG_LEVEL)
@@ -31,6 +32,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    """Count every request by method + status for the /metrics endpoint."""
+    response = await call_next(request)
+    record_request(request.method, response.status_code)
+    return response
+
 
 app.include_router(api_router)
 
@@ -63,6 +73,12 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+async def metrics():
+    """Prometheus-format metrics (always open, outside /api/v1 auth)."""
+    return PlainTextResponse(render_prometheus(), media_type="text/plain; version=0.0.4")
 
 
 @app.on_event("startup")
