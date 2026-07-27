@@ -19,13 +19,15 @@ services:
     environment:
       # Connect via the compose service name, not localhost.
       DATABASE_URL: mysql+pymysql://root:${MYSQL_ROOT_PASSWORD:-root}@mysql:3306/${MYSQL_DATABASE:-data_agent}
+      APP_ENV: ${APP_ENV:-production}
       CRYPTO_KEY: ${CRYPTO_KEY}
       BACKEND_CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173","http://localhost:8080"]'
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      AUTH_ENABLED: ${AUTH_ENABLED:-false}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      CODE_EXECUTOR_TYPE: ${CODE_EXECUTOR_TYPE:-docker}
     ports:
       - "8000:8000"
     volumes:

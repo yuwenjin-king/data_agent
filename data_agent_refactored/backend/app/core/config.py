@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -6,6 +7,7 @@ class Settings(BaseSettings):
 
     APP_NAME: str = "Data Agent"
     APP_VERSION: str = "1.0.0"
+    APP_ENV: str = "development"
     DEBUG: bool = True
 
     # Logging
@@ -49,6 +51,7 @@ class Settings(BaseSettings):
 
     # Code Execution
     CODE_EXECUTOR_TYPE: str = "local"  # local or docker
+    ALLOW_LOCAL_CODE_EXECUTOR_IN_PRODUCTION: bool = False
     DOCKER_IMAGE: str = "python:3.11-slim"
 
     # Workflow / LLM execution
@@ -63,6 +66,34 @@ class Settings(BaseSettings):
 
     # Vector store (memory | chroma | elasticsearch)
     VECTOR_STORE_TYPE: str = "memory"
+
+    @model_validator(mode="after")
+    def validate_production_settings(self) -> "Settings":
+        """Fail fast when production mode is configured with unsafe defaults."""
+        if self.APP_ENV.lower() not in {"production", "prod"}:
+            return self
+
+        missing = [
+            name
+            for name in ("CRYPTO_KEY", "JWT_SECRET_KEY", "ADMIN_PASSWORD")
+            if not getattr(self, name).strip()
+        ]
+        if missing:
+            raise ValueError(
+                "Production configuration requires non-empty values for: "
+                + ", ".join(missing)
+            )
+        if not self.AUTH_ENABLED:
+            raise ValueError("Production configuration requires AUTH_ENABLED=true")
+        if (
+            self.CODE_EXECUTOR_TYPE == "local"
+            and not self.ALLOW_LOCAL_CODE_EXECUTOR_IN_PRODUCTION
+        ):
+            raise ValueError(
+                "Production configuration cannot use CODE_EXECUTOR_TYPE=local unless "
+                "ALLOW_LOCAL_CODE_EXECUTOR_IN_PRODUCTION=true"
+            )
+        return self
 
 
 settings = Settings()
