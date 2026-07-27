@@ -2,7 +2,9 @@
 
 from app.core.config import settings
 from app.core.security import hash_password
+from app.models.agent import Agent
 from app.models.user import User
+from app.services.agent_service import agent_crud
 
 
 def _make_user(db_session, username="testadmin", password="secret"):
@@ -61,10 +63,60 @@ def test_login_rejects_wrong_password(client, db_session, monkeypatch):
     assert resp.status_code == 401
 
 
-def test_completions_stays_open_when_enabled(client, db_session, monkeypatch):
+def test_completions_blocks_without_credentials_when_enabled(client, db_session, monkeypatch):
     monkeypatch.setattr(settings, "AUTH_ENABLED", True)
-    # /completions lives on the open router (agent-facing) — must not 401.
     resp = client.post(
         "/api/v1/chat/completions", json={"agent_id": 1, "message": "hi", "stream": False}
     )
-    assert resp.status_code != 401
+    assert resp.status_code == 401
+
+
+def test_completions_accepts_login_token_when_enabled(client, db_session, monkeypatch):
+    monkeypatch.setattr(settings, "AUTH_ENABLED", True)
+    _make_user(db_session)
+    login = client.post("/api/v1/auth/login", data={"username": "testadmin", "password": "secret"})
+    token = login.json()["access_token"]
+
+    resp = client.post(
+        "/api/v1/chat/completions",
+        json={"agent_id": 1, "message": "hi", "stream": False},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert resp.status_code == 200
+
+
+def test_completions_accepts_bound_agent_api_key_when_enabled(client, db_session, monkeypatch):
+    monkeypatch.setattr(settings, "AUTH_ENABLED", True)
+    agent = Agent(name="Sales Agent", status="published")
+    db_session.add(agent)
+    db_session.commit()
+    db_session.refresh(agent)
+    _, raw_key = agent_crud.generate_api_key(db_session, agent_id=agent.id)
+
+    resp = client.post(
+        "/api/v1/chat/completions",
+        json={"agent_id": agent.id, "message": "hi", "stream": False},
+        headers={"X-Agent-API-Key": raw_key},
+    )
+
+    assert resp.status_code == 200
+
+
+def test_completions_rejects_unbound_agent_api_key_when_enabled(client, db_session, monkeypatch):
+    monkeypatch.setattr(settings, "AUTH_ENABLED", True)
+    first = Agent(name="First Agent", status="published")
+    second = Agent(name="Second Agent", status="published")
+    db_session.add_all([first, second])
+    db_session.commit()
+    db_session.refresh(first)
+    db_session.refresh(second)
+    _, raw_key = agent_crud.generate_api_key(db_session, agent_id=first.id)
+
+    resp = client.post(
+        "/api/v1/chat/completions",
+        json={"agent_id": second.id, "message": "hi", "stream": False},
+        headers={"X-Agent-API-Key": raw_key},
+    )
+
+    assert resp.status_code == 403

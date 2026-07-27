@@ -50,13 +50,24 @@ export const chatService = {
   getMessages: (sessionId) => api.get(`/chat/messages/session/${sessionId}`),
   sendMessage: (data) => api.post('/chat/completions', data),
   streamMessage: async (data, onEvent) => {
+    const token = localStorage.getItem('data_agent_token')
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
     const response = await fetch('/api/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ ...data, stream: true }),
     })
 
     if (!response.ok || !response.body) {
+      if (response.status === 401) {
+        localStorage.removeItem('data_agent_token')
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
+      }
       throw new Error(`Stream request failed: ${response.status}`)
     }
 

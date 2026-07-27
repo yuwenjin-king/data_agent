@@ -1,14 +1,16 @@
 import json
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_auth
+from app.core.auth import get_agent_by_api_key, get_current_user, require_auth
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.chat import ChatMessage
+from app.models.user import User
 from app.schemas.chat import (
     ChatMessageCreate,
     ChatMessageResponse,
@@ -90,8 +92,55 @@ def list_messages(session_id: str, skip: int = 0, limit: int = 100, db: Session 
     return ApiResponse(data=[ChatMessageResponse.model_validate(m) for m in messages])
 
 
+def _extract_bearer_api_key(authorization: Optional[str]) -> Optional[str]:
+    if not authorization:
+        return None
+    scheme, _, value = authorization.partition(" ")
+    if scheme.lower() != "bearer":
+        return None
+    value = value.strip()
+    return value if value.startswith("sk-") else None
+
+
+def _authorize_chat_completion(
+    *,
+    request: ChatRequest,
+    db: Session,
+    current_user: Optional[User],
+    x_agent_api_key: Optional[str],
+    authorization: Optional[str],
+) -> None:
+    if not settings.AUTH_ENABLED:
+        return
+    if current_user and current_user.is_active:
+        return
+
+    api_key = x_agent_api_key or _extract_bearer_api_key(authorization)
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not get_agent_by_api_key(db, agent_id=request.agent_id, api_key=api_key):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid agent API key")
+
+
 @open_router.post("/completions")
-async def chat_completion(request: ChatRequest, db: Session = Depends(get_db)):
+async def chat_completion(
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+    x_agent_api_key: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
+):
+    _authorize_chat_completion(
+        request=request,
+        db=db,
+        current_user=current_user,
+        x_agent_api_key=x_agent_api_key,
+        authorization=authorization,
+    )
     session_id = request.session_id
 
     async def event_stream():
