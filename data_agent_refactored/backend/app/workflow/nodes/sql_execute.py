@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from typing import Any, Dict, Optional
 
 from langchain_core.runnables import RunnableConfig
@@ -7,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.logging import audit_hash, audit_preview
+from app.core.metrics import record_duration_seconds
 from app.workflow.llm.client import LLMClient
 from app.workflow.prompts.loader import PromptLoader
 from app.workflow.sql.executor import SqlExecutionError, execute_read_only_sql
@@ -61,6 +63,7 @@ async def sql_execute_node(
         "sql_preview": audit_preview(sql),
     }
 
+    started_at = time.perf_counter()
     try:
         result = execute_read_only_sql(
             url=url,
@@ -70,6 +73,8 @@ async def sql_execute_node(
             max_rows=settings.MAX_SQL_ROWS,
         )
     except SqlExecutionError as exc:
+        duration_seconds = time.perf_counter() - started_at
+        record_duration_seconds("workflow", "sql_execute", duration_seconds, status="error")
         logger.warning("sql.error", extra={**log_context, "reason": str(exc)})
         return {
             "sql_regenerate_reason": SqlRetryReason(kind="sql_execute", reason=str(exc)),
@@ -78,6 +83,11 @@ async def sql_execute_node(
 
     elapsed_seconds = result.get("elapsed_seconds")
     duration_ms = int(float(elapsed_seconds or 0) * 1000)
+    record_duration_seconds(
+        "workflow",
+        "sql_execute",
+        float(elapsed_seconds) if elapsed_seconds is not None else time.perf_counter() - started_at,
+    )
     logger.info(
         "sql.execute",
         extra={

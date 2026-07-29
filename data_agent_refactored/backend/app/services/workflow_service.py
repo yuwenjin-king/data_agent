@@ -1,11 +1,13 @@
 import json
 import logging
+import time
 import uuid
 from typing import Any, AsyncIterable, Dict, Optional
 
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.metrics import record_duration_seconds
 from app.schemas.chat import ChatMessageCreate, ChatSessionCreate
 from app.services.chat_service import chat_message_crud, chat_session_crud
 from app.workflow.events import (
@@ -81,6 +83,7 @@ async def run_chat_workflow(
         "workflow.start",
         extra={"agent_id": agent_id, "session_id": session_id, "thread_id": thread_id},
     )
+    started_at = time.perf_counter()
 
     llm_client = get_chat_client(db)
     embedding_client = get_embedding_client(db)
@@ -185,6 +188,12 @@ async def run_chat_workflow(
         ),
     )
 
+    record_duration_seconds(
+        "workflow",
+        "chat",
+        time.perf_counter() - started_at,
+        status="error" if error_message else "success",
+    )
     yield done_event()
     logger.info(
         "workflow.end",

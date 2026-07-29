@@ -24,3 +24,30 @@ def test_record_request_is_threadsafe_accumulator():
     snap = metrics.snapshot()
     assert snap[("GET", "200")] >= 2
     assert snap[("POST", "500")] >= 1
+
+
+def test_record_duration_accumulates_bounded_operation_stats():
+    metrics.record_duration_seconds("workflow", "sql_execute", 0.25)
+    metrics.record_duration_seconds("workflow", "sql_execute", 0.75)
+    metrics.record_duration_seconds("workflow", "sql_execute", -1.0, status="error")
+
+    snap = metrics.duration_snapshot()
+
+    assert snap[("workflow", "sql_execute", "success")]["count"] >= 2
+    assert snap[("workflow", "sql_execute", "success")]["sum"] >= 1.0
+    assert snap[("workflow", "sql_execute", "success")]["max"] >= 0.75
+    assert snap[("workflow", "sql_execute", "error")]["sum"] == 0.0
+
+
+def test_render_prometheus_includes_workflow_duration_metrics():
+    metrics.record_duration_seconds("llm", "complete", 0.125)
+
+    body = metrics.render_prometheus()
+
+    assert "# TYPE workflow_operation_duration_seconds_count counter" in body
+    assert "# TYPE workflow_operation_duration_seconds_sum counter" in body
+    assert "# TYPE workflow_operation_duration_seconds_max gauge" in body
+    assert (
+        'workflow_operation_duration_seconds_count'
+        '{component="llm",operation="complete",status="success"}'
+    ) in body

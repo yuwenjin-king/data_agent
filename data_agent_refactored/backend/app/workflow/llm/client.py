@@ -5,6 +5,7 @@ from typing import Any, AsyncIterable, Dict, List, Optional
 import httpx
 from openai import AsyncOpenAI
 
+from app.core.metrics import record_duration_seconds
 from app.models.chat import ModelConfig
 from app.utils.crypto import maybe_decrypt
 
@@ -59,14 +60,18 @@ class LLMClient:
                 **kwargs,
             )
         except Exception:
+            duration_ms = self._duration_ms(started_at)
+            record_duration_seconds("llm", "complete", duration_ms / 1000, status="error")
             logger.warning(
                 "llm.complete.error",
-                extra={**self._log_context(), "duration_ms": self._duration_ms(started_at)},
+                extra={**self._log_context(), "duration_ms": duration_ms},
             )
             raise
+        duration_ms = self._duration_ms(started_at)
+        record_duration_seconds("llm", "complete", duration_ms / 1000)
         logger.info(
             "llm.complete",
-            extra={**self._log_context(), "duration_ms": self._duration_ms(started_at)},
+            extra={**self._log_context(), "duration_ms": duration_ms},
         )
         return response.choices[0].message.content or ""
 
@@ -94,20 +99,24 @@ class LLMClient:
                     chunk_count += 1
                     yield delta
         except Exception:
+            duration_ms = self._duration_ms(started_at)
+            record_duration_seconds("llm", "stream", duration_ms / 1000, status="error")
             logger.warning(
                 "llm.stream.error",
                 extra={
                     **self._log_context(),
-                    "duration_ms": self._duration_ms(started_at),
+                    "duration_ms": duration_ms,
                     "chunk_count": chunk_count,
                 },
             )
             raise
+        duration_ms = self._duration_ms(started_at)
+        record_duration_seconds("llm", "stream", duration_ms / 1000)
         logger.info(
             "llm.stream",
             extra={
                 **self._log_context(),
-                "duration_ms": self._duration_ms(started_at),
+                "duration_ms": duration_ms,
                 "chunk_count": chunk_count,
             },
         )

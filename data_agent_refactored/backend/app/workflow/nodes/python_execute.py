@@ -7,6 +7,7 @@ from typing import Optional
 from langchain_core.runnables import RunnableConfig
 
 from app.core.config import settings
+from app.core.metrics import record_duration_seconds
 from app.workflow.code.executor import CodeResult, CodeSecurityError, get_code_executor
 from app.workflow.state import WorkflowState
 
@@ -31,7 +32,14 @@ async def python_execute_node(
         )
     except CodeSecurityError as exc:
         result = CodeResult(success=False, exception=str(exc))
-    duration_ms = int((time.perf_counter() - started_at) * 1000)
+    duration_seconds = time.perf_counter() - started_at
+    duration_ms = int(duration_seconds * 1000)
+    record_duration_seconds(
+        "workflow",
+        "python_execute",
+        duration_seconds,
+        status="success" if result.success else "error",
+    )
 
     logger.info(
         "python.execute",
