@@ -55,6 +55,8 @@ export const knowledgeService = {
     }),
   setAgentKnowledgeRecall: (id, isRecall) =>
     api.put(`/knowledge/agent-knowledge/${id}/recall`, { is_recall: isRecall }),
+  retryAgentKnowledgeEmbedding: (id) =>
+    api.post(`/knowledge/agent-knowledge/${id}/retry-embedding`),
   getPresetQuestions: (agentId) => api.get(`/knowledge/preset-questions/agent/${agentId}`),
   createPresetQuestion: (data) => api.post('/knowledge/preset-questions', data),
 }

@@ -14,8 +14,9 @@ import {
   Tag,
   Checkbox,
   Upload,
+  Tooltip,
 } from 'antd'
-import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import { agentService, datasourceService, knowledgeService } from '../services'
 
 const { Option } = Select
@@ -178,6 +179,31 @@ function AgentDetail() {
     }
   }
 
+  const handleRetryAgentKnowledge = async (record) => {
+    try {
+      setKnowledgeActionLoading(`retry-knowledge-${record.id}`)
+      await knowledgeService.retryAgentKnowledgeEmbedding(record.id)
+      message.success('索引重试已完成')
+      fetchRelatedData()
+    } catch (error) {
+      message.error('重试失败')
+    } finally {
+      setKnowledgeActionLoading(null)
+    }
+  }
+
+  const renderEmbeddingStatus = (status, errorMsg) => {
+    const statusMap = {
+      PENDING: { color: 'default', text: '待处理' },
+      PROCESSING: { color: 'processing', text: '处理中' },
+      COMPLETED: { color: 'success', text: '已完成' },
+      FAILED: { color: 'error', text: '失败' },
+    }
+    const meta = statusMap[status] || { color: 'default', text: status || '-' }
+    const tag = <Tag color={meta.color}>{meta.text}</Tag>
+    return status === 'FAILED' && errorMsg ? <Tooltip title={errorMsg}>{tag}</Tooltip> : tag
+  }
+
   const handleAddPresetQuestion = async (values) => {
     try {
       await knowledgeService.createPresetQuestion({
@@ -267,6 +293,12 @@ function AgentDetail() {
       key: 'is_recall',
       render: (v) => (v ? '是' : '否'),
     },
+    {
+      title: '索引状态',
+      dataIndex: 'embedding_status',
+      key: 'embedding_status',
+      render: (v, record) => renderEmbeddingStatus(v, record.error_msg),
+    },
   ]
 
   const smColumns = [
@@ -313,7 +345,7 @@ function AgentDetail() {
       title: '向量状态',
       dataIndex: 'embedding_status',
       key: 'embedding_status',
-      render: (v) => v || '-',
+      render: (v, record) => renderEmbeddingStatus(v, record.error_msg),
     },
     {
       title: '是否召回',
@@ -324,25 +356,38 @@ function AgentDetail() {
     {
       title: '操作',
       key: 'actions',
-      render: (_, record) =>
-        record.is_recall ? (
-          <Button
-            size="small"
-            loading={knowledgeActionLoading === `knowledge-${record.id}`}
-            onClick={() => handleAgentKnowledgeRecall(record, false)}
-          >
-            关闭召回
-          </Button>
-        ) : (
-          <Button
-            size="small"
-            type="primary"
-            loading={knowledgeActionLoading === `knowledge-${record.id}`}
-            onClick={() => handleAgentKnowledgeRecall(record, true)}
-          >
-            开启召回
-          </Button>
-        ),
+      render: (_, record) => (
+        <Space wrap>
+          {record.is_recall ? (
+            <Button
+              size="small"
+              loading={knowledgeActionLoading === `knowledge-${record.id}`}
+              onClick={() => handleAgentKnowledgeRecall(record, false)}
+            >
+              关闭召回
+            </Button>
+          ) : (
+            <Button
+              size="small"
+              type="primary"
+              loading={knowledgeActionLoading === `knowledge-${record.id}`}
+              onClick={() => handleAgentKnowledgeRecall(record, true)}
+            >
+              开启召回
+            </Button>
+          )}
+          {record.embedding_status === 'FAILED' && record.is_recall ? (
+            <Button
+              size="small"
+              icon={<ReloadOutlined />}
+              loading={knowledgeActionLoading === `retry-knowledge-${record.id}`}
+              onClick={() => handleRetryAgentKnowledge(record)}
+            >
+              重试
+            </Button>
+          ) : null}
+        </Space>
+      ),
     },
   ]
 

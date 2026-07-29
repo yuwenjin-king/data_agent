@@ -28,6 +28,7 @@ vi.mock('../services', () => ({
     getAgentKnowledge: vi.fn(),
     createAgentKnowledgeMultipart: vi.fn(),
     setAgentKnowledgeRecall: vi.fn(),
+    retryAgentKnowledgeEmbedding: vi.fn(),
     getPresetQuestions: vi.fn(),
     createPresetQuestion: vi.fn(),
   },
@@ -74,10 +75,20 @@ describe('AgentDetail', () => {
             embedding_status: 'COMPLETED',
             is_recall: 1,
           },
+          {
+            id: 42,
+            title: '失败知识',
+            type: 'DOCUMENT',
+            source_filename: 'bad.txt',
+            embedding_status: 'FAILED',
+            error_msg: 'No indexable content',
+            is_recall: 1,
+          },
         ],
       },
     })
     knowledgeService.setAgentKnowledgeRecall.mockResolvedValue({ data: { data: {} } })
+    knowledgeService.retryAgentKnowledgeEmbedding.mockResolvedValue({ data: { data: {} } })
     knowledgeService.getPresetQuestions.mockResolvedValue({ data: { data: [] } })
     knowledgeService.createPresetQuestion.mockResolvedValue({ data: { data: {} } })
   })
@@ -146,9 +157,27 @@ describe('AgentDetail', () => {
 
     await user.click(await screen.findByText('文件知识'))
     expect(await screen.findByText('口径说明')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /关闭召回/ }))
+    await user.click(screen.getAllByRole('button', { name: /关闭召回/ })[0])
 
     expect(knowledgeService.setAgentKnowledgeRecall).toHaveBeenCalledWith(41, 0)
+  })
+
+  it('retries failed agent knowledge indexing', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/agents/1']}>
+        <Routes>
+          <Route path="/agents/:id" element={<AgentDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(await screen.findByText('文件知识'))
+    expect(await screen.findByText('失败知识')).toBeInTheDocument()
+    expect(screen.getByText('失败')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /重试/ }))
+
+    expect(knowledgeService.retryAgentKnowledgeEmbedding).toHaveBeenCalledWith(42)
   })
 
   it('creates preset questions', async () => {
