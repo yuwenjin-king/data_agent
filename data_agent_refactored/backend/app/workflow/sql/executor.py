@@ -1,9 +1,10 @@
-import re
 import time
 from typing import Any, Dict, Optional
 
+import sqlparse
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlparse import tokens as sql_tokens
 
 
 class SqlExecutionError(Exception):
@@ -38,16 +39,24 @@ FORBIDDEN_KEYWORDS = [
 
 
 def _validate_read_only(sql: str) -> None:
-    """Ensure the SQL is a SELECT statement."""
-    cleaned = re.sub(r"--[^\n]*|/\*.*?\*/", " ", sql, flags=re.DOTALL)
-    first_token = cleaned.strip().split(None, 1)[0].lower()
-    if first_token != "select":
-        raise SqlNotAllowedError(f"Only SELECT statements are allowed, got: {first_token}")
-    lowered = cleaned.lower()
-    for keyword in FORBIDDEN_KEYWORDS:
-        # Use word boundary to reduce false positives.
-        if re.search(rf"\b{keyword}\b", lowered):
-            raise SqlNotAllowedError(f"Forbidden keyword detected: {keyword}")
+    """Ensure the SQL is a single read-only SELECT statement."""
+    statements = [statement for statement in sqlparse.parse(sql) if str(statement).strip()]
+    if not statements:
+        raise SqlNotAllowedError("Only SELECT statements are allowed, got: empty")
+    if len(statements) != 1:
+        raise SqlNotAllowedError("Only a single SELECT statement is allowed")
+
+    statement = statements[0]
+    statement_type = statement.get_type().lower()
+    if statement_type != "select":
+        raise SqlNotAllowedError(f"Only SELECT statements are allowed, got: {statement_type}")
+
+    for token in statement.flatten():
+        if token.is_whitespace or token.ttype in sql_tokens.Comment:
+            continue
+        normalized = token.normalized.lower()
+        if token.ttype in sql_tokens.Keyword and normalized in FORBIDDEN_KEYWORDS:
+            raise SqlNotAllowedError(f"Forbidden keyword detected: {normalized}")
 
 
 def _add_limit_if_missing(sql: str, max_rows: int) -> str:
