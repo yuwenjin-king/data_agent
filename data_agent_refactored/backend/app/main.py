@@ -1,4 +1,6 @@
 import logging
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -15,15 +17,48 @@ setup_logging(level=settings.LOG_LEVEL)
 
 logger = logging.getLogger("app.main")
 
+
+def seed_admin_user() -> None:
+    """Seed a superuser from ADMIN_USERNAME/ADMIN_PASSWORD when auth is enabled."""
+    if not settings.AUTH_ENABLED or not settings.ADMIN_PASSWORD:
+        return
+    from app.core.database import SessionLocal
+    from app.core.security import hash_password
+    from app.models.user import User
+
+    db = SessionLocal()
+    try:
+        if db.query(User).count() == 0:
+            db.add(
+                User(
+                    username=settings.ADMIN_USERNAME,
+                    hashed_password=hash_password(settings.ADMIN_PASSWORD),
+                    is_active=1,
+                    is_superuser=1,
+                )
+            )
+            db.commit()
+            logger.info("auth.admin_seeded", extra={"username": settings.ADMIN_USERNAME})
+    finally:
+        db.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    logger.info("app.startup", extra={"app": settings.APP_NAME, "version": settings.APP_VERSION})
+    seed_admin_user()
+    yield
+    logger.info("app.shutdown", extra={"app": settings.APP_NAME, "version": settings.APP_VERSION})
+
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="Data Agent API - 智能数据分析师",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
-
-logger.info("app.startup", extra={"app": settings.APP_NAME, "version": settings.APP_VERSION})
 
 app.add_middleware(
     CORSMiddleware,
@@ -79,32 +114,6 @@ async def health_check():
 async def metrics():
     """Prometheus-format metrics (always open, outside /api/v1 auth)."""
     return PlainTextResponse(render_prometheus(), media_type="text/plain; version=0.0.4")
-
-
-@app.on_event("startup")
-def seed_admin_user():
-    """Seed a superuser from ADMIN_USERNAME/ADMIN_PASSWORD when auth is enabled."""
-    if not settings.AUTH_ENABLED or not settings.ADMIN_PASSWORD:
-        return
-    from app.core.database import SessionLocal
-    from app.core.security import hash_password
-    from app.models.user import User
-
-    db = SessionLocal()
-    try:
-        if db.query(User).count() == 0:
-            db.add(
-                User(
-                    username=settings.ADMIN_USERNAME,
-                    hashed_password=hash_password(settings.ADMIN_PASSWORD),
-                    is_active=1,
-                    is_superuser=1,
-                )
-            )
-            db.commit()
-            logger.info("auth.admin_seeded", extra={"username": settings.ADMIN_USERNAME})
-    finally:
-        db.close()
 
 
 if __name__ == "__main__":
