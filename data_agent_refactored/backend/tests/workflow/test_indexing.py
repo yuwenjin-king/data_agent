@@ -94,6 +94,9 @@ def test_business_knowledge_indexing(db_session):
         top_k=10,
     )
     assert any("核心用户" in doc.text for doc in docs)
+    db_session.refresh(knowledge)
+    assert knowledge.embedding_status == "COMPLETED"
+    assert knowledge.error_msg is None
 
 
 def test_agent_knowledge_indexing(db_session):
@@ -128,3 +131,79 @@ def test_agent_knowledge_indexing(db_session):
         top_k=10,
     )
     assert any("退款" in doc.text for doc in docs)
+    db_session.refresh(knowledge)
+    assert knowledge.embedding_status == "COMPLETED"
+    assert knowledge.error_msg is None
+
+
+def test_agent_knowledge_indexing_failed_on_empty_content(db_session):
+    reset_vector_store()
+
+    agent = Agent(name="ak-empty-agent", status="published")
+    db_session.add(agent)
+    db_session.flush()
+
+    knowledge = agent_knowledge_crud.create(
+        db_session,
+        obj_in=AgentKnowledgeCreate(
+            agent_id=agent.id,
+            title="空知识",
+            type="QA",
+            question="",
+            content="",
+            is_recall=True,
+            splitter_type="token",
+        ),
+    )
+
+    import asyncio
+
+    from app.workflow.indexing import index_agent_knowledge
+
+    asyncio.run(index_agent_knowledge(knowledge))
+    db_session.refresh(knowledge)
+
+    assert knowledge.embedding_status == "FAILED"
+    assert "No indexable content" in knowledge.error_msg
+
+
+def test_agent_knowledge_recall_disabled_clears_index_and_resets_status(db_session):
+    reset_vector_store()
+
+    agent = Agent(name="ak-disable-agent", status="published")
+    db_session.add(agent)
+    db_session.flush()
+
+    knowledge = agent_knowledge_crud.create(
+        db_session,
+        obj_in=AgentKnowledgeCreate(
+            agent_id=agent.id,
+            title="召回知识",
+            type="QA",
+            question="退款",
+            content="退款需要在7天内申请。",
+            is_recall=True,
+            splitter_type="token",
+        ),
+    )
+
+    import asyncio
+
+    from app.workflow.indexing import index_agent_knowledge
+
+    asyncio.run(index_agent_knowledge(knowledge))
+    store = get_vector_store()
+
+    knowledge.is_recall = 0
+    db_session.add(knowledge)
+    db_session.commit()
+    asyncio.run(index_agent_knowledge(knowledge))
+    db_session.refresh(knowledge)
+
+    docs = store.similarity_search(
+        [1.0] + [0.0] * 1535,
+        filter_expr={"vector_type": "AGENT_KNOWLEDGE", "knowledge_id": knowledge.id},
+        top_k=10,
+    )
+    assert docs == []
+    assert knowledge.embedding_status == "PENDING"

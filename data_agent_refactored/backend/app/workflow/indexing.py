@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from app.models.agent import BusinessKnowledge
 from app.models.knowledge import AgentKnowledge
@@ -21,6 +21,16 @@ def _get_embedding_client() -> EmbeddingClient:
 def _delete_existing(vector_type: str, **filters) -> None:
     store = get_vector_store()
     store.delete_by_metadata({"vector_type": vector_type, **filters})
+
+
+def _set_index_status(knowledge, status: str, error_msg: str | None = None) -> None:
+    knowledge.embedding_status = status
+    knowledge.error_msg = error_msg[:255] if error_msg else None
+    db = object_session(knowledge)
+    if db is not None:
+        db.add(knowledge)
+        db.commit()
+        db.refresh(knowledge)
 
 
 async def index_schema_documents(
@@ -88,63 +98,76 @@ async def index_schema_documents(
 async def index_business_knowledge(knowledge: BusinessKnowledge) -> None:
     """Index a business knowledge term."""
     if not knowledge.is_recall:
+        _delete_existing("BUSINESS_TERM", agent_id=knowledge.agent_id, business_term_id=knowledge.id)
+        _set_index_status(knowledge, "PENDING", None)
         return
+    _set_index_status(knowledge, "PROCESSING", None)
     store = get_vector_store()
     embedding_client = _get_embedding_client()
 
-    _delete_existing("BUSINESS_TERM", agent_id=knowledge.agent_id, business_term_id=knowledge.id)
+    try:
+        _delete_existing("BUSINESS_TERM", agent_id=knowledge.agent_id, business_term_id=knowledge.id)
 
-    text = f"{knowledge.business_term}\n{knowledge.description or ''}\n{knowledge.synonyms or ''}"
-    doc = VectorDocument(
-        text=text,
-        metadata={
-            "vector_type": "BUSINESS_TERM",
-            "agent_id": knowledge.agent_id,
-            "business_term_id": knowledge.id,
-        },
-    )
-    doc.embedding = (await embedding_client.embed([text]))[0]
-    store.add_documents([doc])
+        text = (
+            f"{knowledge.business_term}\n{knowledge.description or ''}\n{knowledge.synonyms or ''}"
+        )
+        doc = VectorDocument(
+            text=text,
+            metadata={
+                "vector_type": "BUSINESS_TERM",
+                "agent_id": knowledge.agent_id,
+                "business_term_id": knowledge.id,
+            },
+        )
+        doc.embedding = (await embedding_client.embed([text]))[0]
+        store.add_documents([doc])
+        _set_index_status(knowledge, "COMPLETED", None)
+    except Exception as exc:
+        _set_index_status(knowledge, "FAILED", str(exc))
 
 
 async def index_agent_knowledge(knowledge: AgentKnowledge) -> None:
     """Index agent knowledge chunks."""
     if not knowledge.is_recall:
+        _delete_existing("AGENT_KNOWLEDGE", agent_id=knowledge.agent_id, knowledge_id=knowledge.id)
+        _set_index_status(knowledge, "PENDING", None)
         return
+    _set_index_status(knowledge, "PROCESSING", None)
     store = get_vector_store()
     embedding_client = _get_embedding_client()
 
-    _delete_existing("AGENT_KNOWLEDGE", agent_id=knowledge.agent_id, knowledge_id=knowledge.id)
+    try:
+        _delete_existing("AGENT_KNOWLEDGE", agent_id=knowledge.agent_id, knowledge_id=knowledge.id)
 
-    content = knowledge.content or ""
-    if not content and knowledge.file_path:
-        try:
+        content = knowledge.content or ""
+        if not content and knowledge.file_path:
             content = read_file_text(knowledge.file_path)
-        except Exception:
-            content = ""
 
-    chunks = chunk_text(content, splitter_type=knowledge.splitter_type or "token")
-    docs = []
-    for idx, chunk in enumerate(chunks):
-        doc = VectorDocument(
-            text=chunk,
-            metadata={
-                "vector_type": "AGENT_KNOWLEDGE",
-                "agent_id": knowledge.agent_id,
-                "knowledge_id": knowledge.id,
-                "type": knowledge.type,
-                "chunk_index": idx,
-            },
-        )
-        docs.append(doc)
+        chunks = chunk_text(content, splitter_type=knowledge.splitter_type or "token")
+        docs = []
+        for idx, chunk in enumerate(chunks):
+            doc = VectorDocument(
+                text=chunk,
+                metadata={
+                    "vector_type": "AGENT_KNOWLEDGE",
+                    "agent_id": knowledge.agent_id,
+                    "knowledge_id": knowledge.id,
+                    "type": knowledge.type,
+                    "chunk_index": idx,
+                },
+            )
+            docs.append(doc)
 
-    if not docs:
-        return
+        if not docs:
+            raise ValueError("No indexable content")
 
-    embeddings = await embedding_client.embed([doc.text for doc in docs])
-    for doc, embedding in zip(docs, embeddings):
-        doc.embedding = embedding
-    store.add_documents(docs)
+        embeddings = await embedding_client.embed([doc.text for doc in docs])
+        for doc, embedding in zip(docs, embeddings):
+            doc.embedding = embedding
+        store.add_documents(docs)
+        _set_index_status(knowledge, "COMPLETED", None)
+    except Exception as exc:
+        _set_index_status(knowledge, "FAILED", str(exc))
 
 
 def delete_agent_knowledge_index(knowledge_id: int) -> None:

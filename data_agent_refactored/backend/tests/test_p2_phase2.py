@@ -329,7 +329,7 @@ def test_agent_knowledge_json_create_defaults(client, db_session):
     )
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["embedding_status"] == "PENDING"
+    assert data["embedding_status"] == "COMPLETED"
     assert data["is_deleted"] == 0
     assert data["is_resource_cleaned"] == 0
     assert data["is_recall"] == 1
@@ -367,6 +367,7 @@ def test_agent_knowledge_get_update_recall_delete(client, db_session, upload_dir
     )
     assert recall_response.status_code == 200
     assert recall_response.json()["data"]["is_recall"] == 0
+    assert recall_response.json()["data"]["embedding_status"] == "PENDING"
 
     delete_response = client.delete(f"/api/v1/knowledge/agent-knowledge/{knowledge_id}")
     assert delete_response.status_code == 200

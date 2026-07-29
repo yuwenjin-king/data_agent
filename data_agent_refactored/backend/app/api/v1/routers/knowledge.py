@@ -227,6 +227,7 @@ def update_agent_knowledge(
     knowledge = agent_knowledge_crud.update_fields(db, id=knowledge_id, obj_in=knowledge_in)
     if not knowledge:
         raise HTTPException(status_code=404, detail="Knowledge not found")
+    asyncio.run(index_agent_knowledge(knowledge))
     return ApiResponse(data=AgentKnowledgeResponse.model_validate(knowledge))
 
 
@@ -239,6 +240,7 @@ def toggle_agent_knowledge_recall(
     knowledge = agent_knowledge_crud.set_recall(db, id=knowledge_id, is_recall=request.is_recall)
     if not knowledge:
         raise HTTPException(status_code=404, detail="Knowledge not found")
+    asyncio.run(index_agent_knowledge(knowledge))
     return ApiResponse(data=AgentKnowledgeResponse.model_validate(knowledge))
 
 

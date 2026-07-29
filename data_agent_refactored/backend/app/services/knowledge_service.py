@@ -19,10 +19,8 @@ from app.schemas.knowledge import (
 )
 from app.services.crud_base import CRUDBase
 from app.services.datasource_service import agent_datasource_crud
-from app.utils.chunking import chunk_text
 from app.utils.file_storage import (
     delete_file,
-    read_file_text,
     read_with_size_limit,
     safe_ext,
     save_upload_file,
@@ -443,7 +441,6 @@ class CRUDAgentKnowledge(CRUDBase[AgentKnowledge, AgentKnowledgeCreate, AgentKno
         db.add(obj)
         db.commit()
         db.refresh(obj)
-        _run_embedding_stub(db, obj)
         return obj
 
 
@@ -470,32 +467,6 @@ def _to_str_or_none(value) -> Optional[str]:
         return None
     value = str(value).strip()
     return value if value else None
-
-
-def _run_embedding_stub(db: Session, knowledge: AgentKnowledge) -> None:
-    """Synchronous embedding stub: transitions status without real vector store."""
-    knowledge.embedding_status = "PROCESSING"
-    db.add(knowledge)
-    db.commit()
-    db.refresh(knowledge)
-
-    try:
-        if knowledge.type == "DOCUMENT" and knowledge.file_path:
-            text = read_file_text(knowledge.file_path)
-        elif knowledge.type in ("QA", "FAQ"):
-            text = knowledge.question or ""
-        else:
-            text = knowledge.content or ""
-        chunk_text(text, splitter_type=knowledge.splitter_type or "token")
-        knowledge.embedding_status = "COMPLETED"
-        knowledge.error_msg = None
-    except Exception as exc:
-        knowledge.embedding_status = "FAILED"
-        knowledge.error_msg = str(exc)[:255]
-
-    db.add(knowledge)
-    db.commit()
-    db.refresh(knowledge)
 
 
 semantic_model_crud = CRUDSemanticModel(SemanticModel)
