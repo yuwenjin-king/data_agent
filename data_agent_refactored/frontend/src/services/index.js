@@ -45,8 +45,16 @@ export const datasourceService = {
 export const knowledgeService = {
   getSemanticModels: (agentId) => api.get(`/knowledge/semantic-models/agent/${agentId}`),
   createSemanticModel: (data) => api.post('/knowledge/semantic-models', data),
+  enableSemanticModel: (id) => api.put(`/knowledge/semantic-models/${id}/enable`),
+  disableSemanticModel: (id) => api.put(`/knowledge/semantic-models/${id}/disable`),
   getAgentKnowledge: (agentId) => api.get(`/knowledge/agent-knowledge/agent/${agentId}`),
   createAgentKnowledge: (data) => api.post('/knowledge/agent-knowledge', data),
+  createAgentKnowledgeMultipart: (data) =>
+    api.post('/knowledge/agent-knowledge/create', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  setAgentKnowledgeRecall: (id, isRecall) =>
+    api.put(`/knowledge/agent-knowledge/${id}/recall`, { is_recall: isRecall }),
   getPresetQuestions: (agentId) => api.get(`/knowledge/preset-questions/agent/${agentId}`),
   createPresetQuestion: (data) => api.post('/knowledge/preset-questions', data),
 }

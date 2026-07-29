@@ -13,6 +13,7 @@ import {
   message,
   Tag,
   Checkbox,
+  Upload,
 } from 'antd'
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons'
 import { agentService, datasourceService, knowledgeService } from '../services'
@@ -28,18 +29,22 @@ function AgentDetail() {
 
   const [businessKnowledge, setBusinessKnowledge] = useState([])
   const [semanticModels, setSemanticModels] = useState([])
-  const [, setAgentKnowledge] = useState([])
+  const [agentKnowledge, setAgentKnowledge] = useState([])
   const [presetQuestions, setPresetQuestions] = useState([])
   const [agentDatasources, setAgentDatasources] = useState([])
   const [allDatasources, setAllDatasources] = useState([])
 
   const [knowledgeModalVisible, setKnowledgeModalVisible] = useState(false)
+  const [semanticModalVisible, setSemanticModalVisible] = useState(false)
+  const [agentKnowledgeModalVisible, setAgentKnowledgeModalVisible] = useState(false)
+  const [presetModalVisible, setPresetModalVisible] = useState(false)
   const [datasourceModalVisible, setDatasourceModalVisible] = useState(false)
   const [schemaModalVisible, setSchemaModalVisible] = useState(false)
   const [schemaDatasource, setSchemaDatasource] = useState(null)
   const [availableTables, setAvailableTables] = useState([])
   const [schemaTables, setSchemaTables] = useState([])
   const [datasourceActionLoading, setDatasourceActionLoading] = useState(null)
+  const [knowledgeActionLoading, setKnowledgeActionLoading] = useState(null)
 
   const [form] = Form.useForm()
 
@@ -98,6 +103,90 @@ function AgentDetail() {
       await agentService.createBusinessKnowledge(id, values)
       message.success('添加成功')
       setKnowledgeModalVisible(false)
+      fetchRelatedData()
+      form.resetFields()
+    } catch (error) {
+      message.error('添加失败')
+    }
+  }
+
+  const handleAddSemanticModel = async (values) => {
+    try {
+      await knowledgeService.createSemanticModel({
+        ...values,
+        agent_id: parseInt(id),
+      })
+      message.success('语义模型已添加')
+      setSemanticModalVisible(false)
+      fetchRelatedData()
+      form.resetFields()
+    } catch (error) {
+      message.error('添加失败')
+    }
+  }
+
+  const handleSemanticModelStatus = async (record, enabled) => {
+    try {
+      setKnowledgeActionLoading(`semantic-${record.id}`)
+      if (enabled) {
+        await knowledgeService.enableSemanticModel(record.id)
+        message.success('语义模型已启用')
+      } else {
+        await knowledgeService.disableSemanticModel(record.id)
+        message.success('语义模型已停用')
+      }
+      fetchRelatedData()
+    } catch (error) {
+      message.error('操作失败')
+    } finally {
+      setKnowledgeActionLoading(null)
+    }
+  }
+
+  const handleAddAgentKnowledge = async (values) => {
+    try {
+      const payload = new FormData()
+      payload.append('agent_id', parseInt(id))
+      payload.append('title', values.title)
+      payload.append('type', values.type)
+      payload.append('is_recall', values.is_recall ?? 1)
+      payload.append('splitter_type', values.splitter_type || 'token')
+      if (values.question) payload.append('question', values.question)
+      if (values.content) payload.append('content', values.content)
+      const uploadFile = values.file?.[0]?.originFileObj
+      if (uploadFile) payload.append('file', uploadFile)
+      await knowledgeService.createAgentKnowledgeMultipart(payload)
+      message.success('知识已添加')
+      setAgentKnowledgeModalVisible(false)
+      fetchRelatedData()
+      form.resetFields()
+    } catch (error) {
+      message.error('添加失败')
+    }
+  }
+
+  const handleAgentKnowledgeRecall = async (record, enabled) => {
+    try {
+      setKnowledgeActionLoading(`knowledge-${record.id}`)
+      await knowledgeService.setAgentKnowledgeRecall(record.id, enabled ? 1 : 0)
+      message.success(enabled ? '已开启召回' : '已关闭召回')
+      fetchRelatedData()
+    } catch (error) {
+      message.error('操作失败')
+    } finally {
+      setKnowledgeActionLoading(null)
+    }
+  }
+
+  const handleAddPresetQuestion = async (values) => {
+    try {
+      await knowledgeService.createPresetQuestion({
+        ...values,
+        agent_id: parseInt(id),
+        is_active: values.is_active ?? 1,
+      })
+      message.success('预设问题已添加')
+      setPresetModalVisible(false)
       fetchRelatedData()
       form.resetFields()
     } catch (error) {
@@ -185,6 +274,76 @@ function AgentDetail() {
     { title: '字段名', dataIndex: 'column_name', key: 'column_name' },
     { title: '业务名称', dataIndex: 'business_name', key: 'business_name' },
     { title: '数据类型', dataIndex: 'data_type', key: 'data_type' },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      render: (v) => <Tag color={v ? 'green' : 'default'}>{v ? '启用' : '停用'}</Tag>,
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_, record) =>
+        record.status ? (
+          <Button
+            size="small"
+            loading={knowledgeActionLoading === `semantic-${record.id}`}
+            onClick={() => handleSemanticModelStatus(record, false)}
+          >
+            停用
+          </Button>
+        ) : (
+          <Button
+            size="small"
+            type="primary"
+            loading={knowledgeActionLoading === `semantic-${record.id}`}
+            onClick={() => handleSemanticModelStatus(record, true)}
+          >
+            启用
+          </Button>
+        ),
+    },
+  ]
+
+  const akColumns = [
+    { title: '标题', dataIndex: 'title', key: 'title' },
+    { title: '类型', dataIndex: 'type', key: 'type' },
+    { title: '文件', dataIndex: 'source_filename', key: 'source_filename' },
+    {
+      title: '向量状态',
+      dataIndex: 'embedding_status',
+      key: 'embedding_status',
+      render: (v) => v || '-',
+    },
+    {
+      title: '是否召回',
+      dataIndex: 'is_recall',
+      key: 'is_recall',
+      render: (v) => <Tag color={v ? 'green' : 'default'}>{v ? '召回' : '不召回'}</Tag>,
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_, record) =>
+        record.is_recall ? (
+          <Button
+            size="small"
+            loading={knowledgeActionLoading === `knowledge-${record.id}`}
+            onClick={() => handleAgentKnowledgeRecall(record, false)}
+          >
+            关闭召回
+          </Button>
+        ) : (
+          <Button
+            size="small"
+            type="primary"
+            loading={knowledgeActionLoading === `knowledge-${record.id}`}
+            onClick={() => handleAgentKnowledgeRecall(record, true)}
+          >
+            开启召回
+          </Button>
+        ),
+    },
   ]
 
   const pqColumns = [
@@ -310,8 +469,37 @@ function AgentDetail() {
       key: 'semantic',
       label: '语义模型',
       children: (
-        <Card>
+        <Card
+          extra={
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setSemanticModalVisible(true)}
+            >
+              添加语义模型
+            </Button>
+          }
+        >
           <Table columns={smColumns} dataSource={semanticModels} rowKey="id" />
+        </Card>
+      ),
+    },
+    {
+      key: 'agent-knowledge',
+      label: '文件知识',
+      children: (
+        <Card
+          extra={
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setAgentKnowledgeModalVisible(true)}
+            >
+              添加知识
+            </Button>
+          }
+        >
+          <Table columns={akColumns} dataSource={agentKnowledge} rowKey="id" />
         </Card>
       ),
     },
@@ -319,7 +507,13 @@ function AgentDetail() {
       key: 'preset',
       label: '预设问题',
       children: (
-        <Card>
+        <Card
+          extra={
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setPresetModalVisible(true)}>
+              添加预设问题
+            </Button>
+          }
+        >
           <Table columns={pqColumns} dataSource={presetQuestions} rowKey="id" />
         </Card>
       ),
@@ -393,6 +587,133 @@ function AgentDetail() {
                 确定
               </Button>
               <Button onClick={() => setDatasourceModalVisible(false)}>取消</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="添加语义模型"
+        open={semanticModalVisible}
+        onCancel={() => setSemanticModalVisible(false)}
+        footer={null}
+        width={680}
+      >
+        <Form form={form} layout="vertical" onFinish={handleAddSemanticModel}>
+          <Space style={{ width: '100%' }} align="start">
+            <Form.Item label="表名" name="table_name" rules={[{ required: true }]}>
+              <Input placeholder="orders" />
+            </Form.Item>
+            <Form.Item label="字段名" name="column_name" rules={[{ required: true }]}>
+              <Input placeholder="amount" />
+            </Form.Item>
+          </Space>
+          <Space style={{ width: '100%' }} align="start">
+            <Form.Item label="业务名称" name="business_name" rules={[{ required: true }]}>
+              <Input placeholder="订单金额" />
+            </Form.Item>
+            <Form.Item label="数据类型" name="data_type" rules={[{ required: true }]}>
+              <Input placeholder="decimal" />
+            </Form.Item>
+          </Space>
+          <Form.Item label="同义词" name="synonyms">
+            <Input placeholder="销售额,GMV" />
+          </Form.Item>
+          <Form.Item label="业务描述" name="business_description">
+            <TextArea rows={3} />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                确定
+              </Button>
+              <Button onClick={() => setSemanticModalVisible(false)}>取消</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="添加知识"
+        open={agentKnowledgeModalVisible}
+        onCancel={() => setAgentKnowledgeModalVisible(false)}
+        footer={null}
+        width={680}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleAddAgentKnowledge}
+          initialValues={{ type: 'QA', is_recall: 1, splitter_type: 'token' }}
+        >
+          <Form.Item label="标题" name="title" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item label="类型" name="type" rules={[{ required: true }]}>
+            <Select>
+              <Option value="QA">问答</Option>
+              <Option value="FAQ">FAQ</Option>
+              <Option value="DOCUMENT">文档</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item label="问题" name="question">
+            <Input />
+          </Form.Item>
+          <Form.Item label="内容" name="content">
+            <TextArea rows={4} />
+          </Form.Item>
+          <Form.Item
+            label="文档文件"
+            name="file"
+            valuePropName="fileList"
+            getValueFromEvent={(event) => event?.fileList || []}
+          >
+            <Upload beforeUpload={() => false} maxCount={1}>
+              <Button>选择文件</Button>
+            </Upload>
+          </Form.Item>
+          <Form.Item label="是否召回" name="is_recall">
+            <Select>
+              <Option value={1}>是</Option>
+              <Option value={0}>否</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                确定
+              </Button>
+              <Button onClick={() => setAgentKnowledgeModalVisible(false)}>取消</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="添加预设问题"
+        open={presetModalVisible}
+        onCancel={() => setPresetModalVisible(false)}
+        footer={null}
+      >
+        <Form form={form} layout="vertical" onFinish={handleAddPresetQuestion}>
+          <Form.Item label="问题" name="question" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item label="排序" name="sort_order" initialValue={0}>
+            <Input type="number" />
+          </Form.Item>
+          <Form.Item label="是否启用" name="is_active" initialValue={1}>
+            <Select>
+              <Option value={1}>是</Option>
+              <Option value={0}>否</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                确定
+              </Button>
+              <Button onClick={() => setPresetModalVisible(false)}>取消</Button>
             </Space>
           </Form.Item>
         </Form>
