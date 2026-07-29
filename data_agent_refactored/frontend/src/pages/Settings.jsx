@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Tabs, Table, Button, Space, Form, Input, Select, Modal, message } from 'antd'
+import { Card, Tabs, Table, Button, Space, Form, Input, Select, Modal, message, Tag } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { configService, datasourceService } from '../services'
 
@@ -12,7 +12,14 @@ function Settings() {
   const [modelConfigs, setModelConfigs] = useState([])
   const [promptConfigs, setPromptConfigs] = useState([])
   const [datasourceModalVisible, setDatasourceModalVisible] = useState(false)
+  const [tablesModalVisible, setTablesModalVisible] = useState(false)
+  const [selectedDatasource, setSelectedDatasource] = useState(null)
+  const [datasourceTables, setDatasourceTables] = useState([])
+  const [selectedTable, setSelectedTable] = useState(null)
+  const [tableColumns, setTableColumns] = useState([])
+  const [datasourceActionLoading, setDatasourceActionLoading] = useState(null)
   const [modelModalVisible, setModelModalVisible] = useState(false)
+  const [modelActionLoading, setModelActionLoading] = useState(null)
   const [promptModalVisible, setPromptModalVisible] = useState(false)
   const [form] = Form.useForm()
 
@@ -61,6 +68,58 @@ function Settings() {
     }
   }
 
+  const handleDatasourceAction = async (record, action) => {
+    const actionKey = `${record.id}-${action}`
+    try {
+      setDatasourceActionLoading(actionKey)
+      if (action === 'test') {
+        const res = await datasourceService.testConnection(record.id)
+        const result = res.data.data
+        if (result?.success) {
+          message.success(result.message || '连接测试成功')
+        } else {
+          message.error(result?.message || '连接测试失败')
+        }
+      } else if (action === 'activate') {
+        await datasourceService.activate(record.id)
+        message.success('已激活数据源')
+      } else if (action === 'deactivate') {
+        await datasourceService.deactivate(record.id)
+        message.success('已停用数据源')
+      }
+      fetchDatasources()
+    } catch (error) {
+      message.error('操作失败')
+    } finally {
+      setDatasourceActionLoading(null)
+    }
+  }
+
+  const openTablesModal = async (record) => {
+    try {
+      setSelectedDatasource(record)
+      setSelectedTable(null)
+      setTableColumns([])
+      setTablesModalVisible(true)
+      const res = await datasourceService.getTables(record.id)
+      setDatasourceTables(res.data.data || [])
+    } catch (error) {
+      message.error('读取表列表失败')
+      setDatasourceTables([])
+    }
+  }
+
+  const selectDatasourceTable = async (tableName) => {
+    try {
+      setSelectedTable(tableName)
+      const res = await datasourceService.getColumns(selectedDatasource.id, tableName)
+      setTableColumns(res.data.data || [])
+    } catch (error) {
+      message.error('读取字段列表失败')
+      setTableColumns([])
+    }
+  }
+
   const handleCreateModelConfig = async (values) => {
     try {
       await configService.createModelConfig(values)
@@ -70,6 +129,24 @@ function Settings() {
       form.resetFields()
     } catch (error) {
       message.error('创建失败')
+    }
+  }
+
+  const handleModelAction = async (record, active) => {
+    try {
+      setModelActionLoading(`${record.id}-${active ? 'activate' : 'deactivate'}`)
+      if (active) {
+        await configService.activateModelConfig(record.id)
+        message.success('模型配置已激活')
+      } else {
+        await configService.deactivateModelConfig(record.id)
+        message.success('模型配置已停用')
+      }
+      fetchModelConfigs()
+    } catch (error) {
+      message.error('操作失败')
+    } finally {
+      setModelActionLoading(null)
     }
   }
 
@@ -91,7 +168,52 @@ function Settings() {
     { title: '主机', dataIndex: 'host', key: 'host' },
     { title: '端口', dataIndex: 'port', key: 'port' },
     { title: '数据库', dataIndex: 'database_name', key: 'database_name' },
-    { title: '状态', dataIndex: 'status', key: 'status' },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      render: (value) => (
+        <Tag color={value === 'active' ? 'green' : 'default'}>
+          {value === 'active' ? '已激活' : '未激活'}
+        </Tag>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_, record) => (
+        <Space wrap>
+          <Button
+            size="small"
+            loading={datasourceActionLoading === `${record.id}-test`}
+            onClick={() => handleDatasourceAction(record, 'test')}
+          >
+            测试连接
+          </Button>
+          <Button size="small" onClick={() => openTablesModal(record)}>
+            表字段
+          </Button>
+          {record.status === 'active' ? (
+            <Button
+              size="small"
+              loading={datasourceActionLoading === `${record.id}-deactivate`}
+              onClick={() => handleDatasourceAction(record, 'deactivate')}
+            >
+              停用
+            </Button>
+          ) : (
+            <Button
+              size="small"
+              type="primary"
+              loading={datasourceActionLoading === `${record.id}-activate`}
+              onClick={() => handleDatasourceAction(record, 'activate')}
+            >
+              激活
+            </Button>
+          )}
+        </Space>
+      ),
+    },
   ]
 
   const modelColumns = [
@@ -104,6 +226,30 @@ function Settings() {
       dataIndex: 'is_active',
       key: 'is_active',
       render: (v) => (v ? '是' : '否'),
+    },
+    { title: 'API Key', dataIndex: 'api_key', key: 'api_key' },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_, record) =>
+        record.is_active ? (
+          <Button
+            size="small"
+            loading={modelActionLoading === `${record.id}-deactivate`}
+            onClick={() => handleModelAction(record, false)}
+          >
+            停用
+          </Button>
+        ) : (
+          <Button
+            size="small"
+            type="primary"
+            loading={modelActionLoading === `${record.id}-activate`}
+            onClick={() => handleModelAction(record, true)}
+          >
+            激活
+          </Button>
+        ),
     },
   ]
 
@@ -269,6 +415,40 @@ function Settings() {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={`${selectedDatasource?.name || ''} 表字段`}
+        open={tablesModalVisible}
+        onCancel={() => setTablesModalVisible(false)}
+        footer={null}
+        width={760}
+      >
+        <Space align="start" style={{ width: '100%' }}>
+          <Table
+            size="small"
+            style={{ width: 320 }}
+            columns={[{ title: '表名', dataIndex: 'name', key: 'name' }]}
+            dataSource={datasourceTables.map((name) => ({ name }))}
+            rowKey="name"
+            pagination={false}
+            onRow={(record) => ({
+              onClick: () => selectDatasourceTable(record.name),
+              style: {
+                cursor: 'pointer',
+                background: selectedTable === record.name ? '#e6f4ff' : undefined,
+              },
+            })}
+          />
+          <Table
+            size="small"
+            style={{ flex: 1, minWidth: 320 }}
+            columns={[{ title: selectedTable ? `${selectedTable} 字段` : '字段', dataIndex: 'name' }]}
+            dataSource={tableColumns.map((name) => ({ name }))}
+            rowKey="name"
+            pagination={false}
+          />
+        </Space>
       </Modal>
 
       <Modal

@@ -70,6 +70,19 @@ class CRUDDatasource(CRUDBase[Datasource, DatasourceCreate, DatasourceUpdate]):
         db.refresh(db_obj)
         return db_obj
 
+    def set_status(self, db: Session, *, datasource_id: int, status: str) -> Optional[Datasource]:
+        """Set datasource status to ``active`` or ``inactive``."""
+        if status not in ("active", "inactive"):
+            raise ValueError("status must be 'active' or 'inactive'")
+        datasource = self.get(db, id=datasource_id)
+        if not datasource:
+            return None
+        datasource.status = status
+        db.add(datasource)
+        db.commit()
+        db.refresh(datasource)
+        return datasource
+
     def test_connection(self, db: Session, *, datasource_id: int) -> DatasourceTestResponse:
         datasource = self.get(db, id=datasource_id)
         if not datasource:
@@ -167,6 +180,34 @@ class CRUDAgentDatasource(CRUDBase[AgentDatasource, AgentDatasourceCreate, Agent
             .filter(and_(AgentDatasource.agent_id == agent_id, AgentDatasource.is_active == 1))
             .first()
         )
+
+    def set_active(
+        self, db: Session, *, link_id: int, is_active: int = 1
+    ) -> Optional[AgentDatasource]:
+        """Activate or deactivate an agent↔datasource link.
+
+        When activating, other links for the same agent are deactivated so the
+        workflow always resolves a single active business database.
+        """
+        link = self.get(db, id=link_id)
+        if not link:
+            return None
+        if is_active:
+            (
+                db.query(AgentDatasource)
+                .filter(
+                    and_(
+                        AgentDatasource.agent_id == link.agent_id,
+                        AgentDatasource.id != link.id,
+                    )
+                )
+                .update({"is_active": 0}, synchronize_session=False)
+            )
+        link.is_active = 1 if is_active else 0
+        db.add(link)
+        db.commit()
+        db.refresh(link)
+        return link
 
     def init_schema(
         self, db: Session, *, agent_id: int, table_names: List[str]

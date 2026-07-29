@@ -111,14 +111,31 @@ class ModelConfigBase(BaseModel):
 
 
 class ModelConfigCreate(ModelConfigBase):
+    # Newly created models default to inactive so the user must explicitly activate.
+    # The Settings UI offers an "立即激活" switch when creating.
     pass
 
 
-class ModelConfigUpdate(ModelConfigBase):
+class ModelConfigUpdate(BaseModel):
+    """Partial update — all fields optional (avoids forcing api_key on every PATCH)."""
+
+    model_config = ConfigDict(protected_namespaces=())
+
     provider: Optional[str] = None
     base_url: Optional[str] = None
     api_key: Optional[str] = None
     model_name: Optional[str] = None
+    temperature: Optional[float] = None
+    is_active: Optional[bool] = None
+    max_tokens: Optional[int] = None
+    model_type: Optional[str] = None
+    completions_path: Optional[str] = None
+    embeddings_path: Optional[str] = None
+    proxy_enabled: Optional[bool] = None
+    proxy_host: Optional[str] = None
+    proxy_port: Optional[int] = None
+    proxy_username: Optional[str] = None
+    proxy_password: Optional[str] = None
 
 
 class ModelConfigResponse(ModelConfigBase):

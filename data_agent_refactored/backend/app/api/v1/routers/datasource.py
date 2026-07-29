@@ -80,7 +80,26 @@ def test_datasource_connection(datasource_id: int, db: Session = Depends(get_db)
     if not datasource:
         raise HTTPException(status_code=404, detail="Datasource not found")
     result = datasource_crud.test_connection(db, datasource_id=datasource_id)
+    # On successful test, auto-activate so the datasource can be used immediately.
+    if result.success:
+        datasource_crud.set_status(db, datasource_id=datasource_id, status="active")
     return ApiResponse(data=result)
+
+
+@router.post("/{datasource_id}/activate", response_model=ApiResponse[DatasourceResponse])
+def activate_datasource(datasource_id: int, db: Session = Depends(get_db)):
+    datasource = datasource_crud.set_status(db, datasource_id=datasource_id, status="active")
+    if not datasource:
+        raise HTTPException(status_code=404, detail="Datasource not found")
+    return ApiResponse(data=DatasourceResponse.model_validate(datasource))
+
+
+@router.post("/{datasource_id}/deactivate", response_model=ApiResponse[DatasourceResponse])
+def deactivate_datasource(datasource_id: int, db: Session = Depends(get_db)):
+    datasource = datasource_crud.set_status(db, datasource_id=datasource_id, status="inactive")
+    if not datasource:
+        raise HTTPException(status_code=404, detail="Datasource not found")
+    return ApiResponse(data=DatasourceResponse.model_validate(datasource))
 
 
 @router.get("/{datasource_id}/tables", response_model=ApiResponse[List[str]])
@@ -119,8 +138,27 @@ def link_agent_datasource(link_in: AgentDatasourceCreate, db: Session = Depends(
         db, agent_id=link_in.agent_id, datasource_id=link_in.datasource_id
     )
     if existing:
+        # Re-activate existing link when client asks for active binding.
+        if link_in.is_active:
+            existing = agent_datasource_crud.set_active(db, link_id=existing.id, is_active=1)
         return ApiResponse(data=AgentDatasourceResponse.model_validate(existing))
+    # Default new links to active so the agent can query immediately.
+    if link_in.is_active is None:
+        link_in.is_active = 1
     link = agent_datasource_crud.create(db, obj_in=link_in)
+    if link.is_active:
+        link = agent_datasource_crud.set_active(db, link_id=link.id, is_active=1)
+    return ApiResponse(data=AgentDatasourceResponse.model_validate(link))
+
+
+@router.post(
+    "/agent-datasources/{link_id}/activate",
+    response_model=ApiResponse[AgentDatasourceResponse],
+)
+def activate_agent_datasource(link_id: int, db: Session = Depends(get_db)):
+    link = agent_datasource_crud.set_active(db, link_id=link_id, is_active=1)
+    if not link:
+        raise HTTPException(status_code=404, detail="Agent datasource link not found")
     return ApiResponse(data=AgentDatasourceResponse.model_validate(link))
 
 

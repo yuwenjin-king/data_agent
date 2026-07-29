@@ -239,3 +239,22 @@ def update_model_config(
         raise HTTPException(status_code=404, detail="Model config not found")
     config = model_config_crud.update(db, db_obj=config, obj_in=config_in)
     return ApiResponse(data=ModelConfigResponse.model_validate(config))
+
+
+@router.post("/model-configs/{config_id}/activate", response_model=ApiResponse[ModelConfigResponse])
+def activate_model_config(config_id: int, db: Session = Depends(get_db)):
+    """Activate this model config (and deactivate others of the same type)."""
+    config = model_config_crud.activate(db, config_id=config_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="Model config not found")
+    return ApiResponse(data=ModelConfigResponse.model_validate(config))
+
+
+@router.post(
+    "/model-configs/{config_id}/deactivate", response_model=ApiResponse[ModelConfigResponse]
+)
+def deactivate_model_config(config_id: int, db: Session = Depends(get_db)):
+    config = model_config_crud.deactivate(db, config_id=config_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="Model config not found")
+    return ApiResponse(data=ModelConfigResponse.model_validate(config))

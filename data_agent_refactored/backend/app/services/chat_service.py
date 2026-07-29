@@ -135,6 +135,42 @@ class CRUDModelConfig(CRUDBase[ModelConfig, ModelConfigCreate, ModelConfigUpdate
             .all()
         )
 
+    def activate(self, db: Session, *, config_id: int) -> Optional[ModelConfig]:
+        """Mark one model as active; deactivate other non-deleted configs of the same type.
+
+        Chat / Embedding each keep at most one active config so the workflow
+        registry can resolve a single client per role.
+        """
+        config = self.get(db, id=config_id)
+        if not config or config.is_deleted:
+            return None
+        (
+            db.query(ModelConfig)
+            .filter(
+                and_(
+                    ModelConfig.model_type == config.model_type,
+                    ModelConfig.is_deleted == 0,
+                    ModelConfig.id != config.id,
+                )
+            )
+            .update({"is_active": False}, synchronize_session=False)
+        )
+        config.is_active = True
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+        return config
+
+    def deactivate(self, db: Session, *, config_id: int) -> Optional[ModelConfig]:
+        config = self.get(db, id=config_id)
+        if not config or config.is_deleted:
+            return None
+        config.is_active = False
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+        return config
+
 
 chat_session_crud = CRUDChatSession(ChatSession)
 chat_message_crud = CRUDChatMessage(ChatMessage)

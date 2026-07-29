@@ -14,3 +14,9 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: () => false,
   }),
 })
+
+window.getComputedStyle = () => ({
+  getPropertyValue: () => '',
+})
+
+Element.prototype.scrollIntoView = Element.prototype.scrollIntoView || (() => {})

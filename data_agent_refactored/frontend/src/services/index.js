@@ -26,7 +26,14 @@ export const datasourceService = {
   create: (data) => api.post('/datasources', data),
   update: (id, data) => api.put(`/datasources/${id}`, data),
   delete: (id) => api.delete(`/datasources/${id}`),
+  testConnection: (id) => api.post(`/datasources/${id}/test`),
+  activate: (id) => api.post(`/datasources/${id}/activate`),
+  deactivate: (id) => api.post(`/datasources/${id}/deactivate`),
+  getTables: (id) => api.get(`/datasources/${id}/tables`),
+  getColumns: (id, tableName) =>
+    api.get(`/datasources/${id}/tables/${encodeURIComponent(tableName)}/columns`),
   linkAgent: (data) => api.post('/datasources/agent-datasources', data),
+  activateAgentDatasource: (linkId) => api.post(`/datasources/agent-datasources/${linkId}/activate`),
   getAgentDatasources: (agentId) => api.get(`/datasources/agent-datasources/agent/${agentId}`),
   getLogicalRelations: (datasourceId) =>
     api.get(`/datasources/logical-relations/datasource/${datasourceId}`),
@@ -112,4 +119,6 @@ export const configService = {
     api.get('/chat/model-configs', { params: { model_type: modelType } }),
   createModelConfig: (data) => api.post('/chat/model-configs', data),
   updateModelConfig: (id, data) => api.put(`/chat/model-configs/${id}`, data),
+  activateModelConfig: (id) => api.post(`/chat/model-configs/${id}/activate`),
+  deactivateModelConfig: (id) => api.post(`/chat/model-configs/${id}/deactivate`),
 }

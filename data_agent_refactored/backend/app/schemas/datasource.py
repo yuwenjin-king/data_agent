@@ -20,7 +20,9 @@ class DatasourceCreate(DatasourceBase):
     pass
 
 
-class DatasourceUpdate(DatasourceBase):
+class DatasourceUpdate(BaseModel):
+    """Partial update — all fields optional."""
+
     name: Optional[str] = None
     type: Optional[str] = None
     host: Optional[str] = None
@@ -28,6 +30,9 @@ class DatasourceUpdate(DatasourceBase):
     database_name: Optional[str] = None
     username: Optional[str] = None
     password: Optional[str] = None
+    connection_url: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = Field(None, description="active | inactive")
 
 
 class DatasourceResponse(BaseModel):
