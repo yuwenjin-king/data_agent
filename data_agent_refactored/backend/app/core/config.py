@@ -66,6 +66,7 @@ class Settings(BaseSettings):
 
     # Vector store (memory | chroma | elasticsearch)
     VECTOR_STORE_TYPE: str = "memory"
+    VECTOR_STORE_PATH: str = "./data/vectorstore.jsonl"
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":

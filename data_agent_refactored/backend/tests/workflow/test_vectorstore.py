@@ -3,6 +3,8 @@ import pytest
 from app.workflow.retrieval.hybrid import hybrid_search
 from app.workflow.vectorstore.document import VectorDocument
 from app.workflow.vectorstore.memory import InMemoryVectorStore
+from app.workflow.vectorstore.persistent import PersistentVectorStore
+from app.workflow.vectorstore.store import get_vector_store, reset_vector_store
 
 
 def embed_user():
@@ -66,3 +68,50 @@ def test_delete_by_metadata():
     deleted = store.delete_by_metadata({"agent_id": 1})
     assert deleted == 2
     assert len(store.documents) == 1
+
+
+def test_persistent_store_loads_documents_across_instances(tmp_path):
+    path = tmp_path / "vectors.jsonl"
+    store = PersistentVectorStore(str(path))
+    store.add_documents(
+        [
+            VectorDocument(
+                id="user-doc",
+                text="user table",
+                embedding=embed_user(),
+                metadata={"agent_id": 1},
+            )
+        ]
+    )
+
+    reloaded = PersistentVectorStore(str(path))
+    results = reloaded.similarity_search(embed_user(), filter_expr={"agent_id": 1}, top_k=1)
+
+    assert len(results) == 1
+    assert results[0].id == "user-doc"
+
+
+def test_persistent_store_delete_updates_disk(tmp_path):
+    path = tmp_path / "vectors.jsonl"
+    store = PersistentVectorStore(str(path))
+    store.add_documents(
+        [
+            VectorDocument(id="a", text="a", embedding=embed_user(), metadata={"agent_id": 1}),
+            VectorDocument(id="b", text="b", embedding=embed_order(), metadata={"agent_id": 2}),
+        ]
+    )
+
+    assert store.delete_by_metadata({"agent_id": 1}) == 1
+    reloaded = PersistentVectorStore(str(path))
+
+    assert [doc.id for doc in reloaded.documents] == ["b"]
+
+
+def test_vector_store_factory_supports_persistent(monkeypatch, tmp_path):
+    monkeypatch.setattr("app.core.config.settings.VECTOR_STORE_TYPE", "persistent")
+    monkeypatch.setattr("app.core.config.settings.VECTOR_STORE_PATH", str(tmp_path / "store.jsonl"))
+
+    reset_vector_store()
+    store = get_vector_store()
+
+    assert isinstance(store, PersistentVectorStore)

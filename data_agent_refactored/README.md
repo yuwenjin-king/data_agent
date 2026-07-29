@@ -83,6 +83,7 @@ docker compose up --build
 - nginx 已把 `/api` 反代到后端，并保留 SSE 流式（聊天）。
 - `CRYPTO_KEY` 用于密钥加密，**必须跨重启保持不变**，否则历史加密数据无法解密。生成新 key：
   `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+- Docker 示例默认使用 `VECTOR_STORE_TYPE=persistent`，向量索引会写入 `/app/data/vectorstore.jsonl`，容器重启后仍可召回。
 
 > 若连接的是已存在的原 DataAgent 数据库，进入 backend 容器执行 `alembic stamp head`（先对照 `docs/schema-compatibility.md`）。
 
