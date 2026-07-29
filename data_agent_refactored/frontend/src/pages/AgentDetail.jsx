@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Card, Tabs, Button, Space, Table, Form, Input, Select, Modal, message } from 'antd'
+import {
+  Card,
+  Tabs,
+  Button,
+  Space,
+  Table,
+  Form,
+  Input,
+  Select,
+  Modal,
+  message,
+  Tag,
+  Checkbox,
+} from 'antd'
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons'
 import { agentService, datasourceService, knowledgeService } from '../services'
 
@@ -22,6 +35,11 @@ function AgentDetail() {
 
   const [knowledgeModalVisible, setKnowledgeModalVisible] = useState(false)
   const [datasourceModalVisible, setDatasourceModalVisible] = useState(false)
+  const [schemaModalVisible, setSchemaModalVisible] = useState(false)
+  const [schemaDatasource, setSchemaDatasource] = useState(null)
+  const [availableTables, setAvailableTables] = useState([])
+  const [schemaTables, setSchemaTables] = useState([])
+  const [datasourceActionLoading, setDatasourceActionLoading] = useState(null)
 
   const [form] = Form.useForm()
 
@@ -102,6 +120,54 @@ function AgentDetail() {
     }
   }
 
+  const handleActivateDatasourceLink = async (record) => {
+    try {
+      setDatasourceActionLoading(`activate-${record.id}`)
+      await datasourceService.activateAgentDatasource(record.id)
+      message.success('已设为当前数据源')
+      fetchRelatedData()
+    } catch (error) {
+      message.error('激活失败')
+    } finally {
+      setDatasourceActionLoading(null)
+    }
+  }
+
+  const openSchemaModal = async (record) => {
+    const datasource = allDatasources.find((item) => item.id === record.datasource_id)
+    try {
+      setSchemaDatasource(datasource || record)
+      setSchemaTables([])
+      setSchemaModalVisible(true)
+      setDatasourceActionLoading(`tables-${record.id}`)
+      const res = await datasourceService.getTables(record.datasource_id)
+      setAvailableTables(res.data.data || [])
+    } catch (error) {
+      message.error('读取表列表失败')
+      setAvailableTables([])
+    } finally {
+      setDatasourceActionLoading(null)
+    }
+  }
+
+  const handleInitSchema = async () => {
+    if (!schemaTables.length) {
+      message.warning('请至少选择一张表')
+      return
+    }
+    try {
+      setDatasourceActionLoading('init-schema')
+      await agentService.initAgentSchema(id, schemaTables)
+      message.success('Schema 初始化完成')
+      setSchemaModalVisible(false)
+      setSchemaTables([])
+    } catch (error) {
+      message.error('Schema 初始化失败')
+    } finally {
+      setDatasourceActionLoading(null)
+    }
+  }
+
   const bkColumns = [
     { title: '业务名词', dataIndex: 'business_term', key: 'business_term' },
     { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
@@ -146,7 +212,32 @@ function AgentDetail() {
       title: '是否激活',
       dataIndex: 'is_active',
       key: 'is_active',
-      render: (v) => (v ? '是' : '否'),
+      render: (v) => <Tag color={v ? 'green' : 'default'}>{v ? '当前使用' : '未使用'}</Tag>,
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_, record) => (
+        <Space wrap>
+          {record.is_active ? null : (
+            <Button
+              size="small"
+              type="primary"
+              loading={datasourceActionLoading === `activate-${record.id}`}
+              onClick={() => handleActivateDatasourceLink(record)}
+            >
+              设为当前
+            </Button>
+          )}
+          <Button
+            size="small"
+            loading={datasourceActionLoading === `tables-${record.id}`}
+            onClick={() => openSchemaModal(record)}
+          >
+            初始化 Schema
+          </Button>
+        </Space>
+      ),
     },
   ]
 
@@ -305,6 +396,22 @@ function AgentDetail() {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={`初始化 Schema - ${schemaDatasource?.name || ''}`}
+        open={schemaModalVisible}
+        onCancel={() => setSchemaModalVisible(false)}
+        onOk={handleInitSchema}
+        confirmLoading={datasourceActionLoading === 'init-schema'}
+        okText="初始化"
+        cancelText="取消"
+      >
+        <Checkbox.Group
+          value={schemaTables}
+          onChange={setSchemaTables}
+          options={availableTables.map((name) => ({ label: name, value: name }))}
+        />
       </Modal>
     </div>
   )

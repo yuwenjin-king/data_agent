@@ -18,6 +18,8 @@ export const agentService = {
   getBusinessKnowledge: (agentId) => api.get(`/agents/${agentId}/business-knowledge`),
   createBusinessKnowledge: (agentId, data) =>
     api.post(`/agents/${agentId}/business-knowledge`, { ...data, agent_id: agentId }),
+  initAgentSchema: (agentId, tableNames) =>
+    api.post(`/agents/${agentId}/datasources/init-schema`, { table_names: tableNames }),
 }
 
 export const datasourceService = {
