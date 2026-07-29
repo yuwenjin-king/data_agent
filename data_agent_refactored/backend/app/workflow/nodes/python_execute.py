@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import time
 from typing import Optional
 
 from langchain_core.runnables import RunnableConfig
@@ -22,6 +23,7 @@ async def python_execute_node(
     stdin = json.dumps(memory, ensure_ascii=False, default=str)
 
     executor = get_code_executor()
+    started_at = time.perf_counter()
     # Run the blocking subprocess off the event loop.
     try:
         result: CodeResult = await asyncio.to_thread(
@@ -29,13 +31,24 @@ async def python_execute_node(
         )
     except CodeSecurityError as exc:
         result = CodeResult(success=False, exception=str(exc))
+    duration_ms = int((time.perf_counter() - started_at) * 1000)
 
     logger.info(
         "python.execute",
         extra={
+            "agent_id": state.get("agent_id"),
+            "session_id": state.get("session_id"),
+            "thread_id": state.get("thread_id"),
+            "node": "python_execute",
+            "plan_step": state.get("plan_current_step"),
             "success": result.success,
             "tries": tries,
             "fallback": tries >= settings.PYTHON_MAX_TRIES,
+            "duration_ms": duration_ms,
+            "executor_type": settings.CODE_EXECUTOR_TYPE,
+            "stdout_bytes": len((result.stdout or "").encode("utf-8")),
+            "stderr_bytes": len((result.stderr or "").encode("utf-8")),
+            "has_exception": bool(result.exception),
         },
     )
 

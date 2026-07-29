@@ -1,3 +1,5 @@
+import logging
+import time
 from typing import Any, AsyncIterable, Dict, List, Optional
 
 import httpx
@@ -5,6 +7,8 @@ from openai import AsyncOpenAI
 
 from app.models.chat import ModelConfig
 from app.utils.crypto import maybe_decrypt
+
+logger = logging.getLogger("app.workflow.llm")
 
 
 class LLMClient:
@@ -45,12 +49,24 @@ class LLMClient:
         max_tokens: Optional[int] = None,
         **kwargs: Any,
     ) -> str:
-        response = await self.client.chat.completions.create(  # type: ignore[call-overload]  # ORM Column config attrs
-            model=self.model_name,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=temperature if temperature is not None else self.config.temperature,
-            max_tokens=max_tokens if max_tokens is not None else self.config.max_tokens,
-            **kwargs,
+        started_at = time.perf_counter()
+        try:
+            response = await self.client.chat.completions.create(  # type: ignore[call-overload]  # ORM Column config attrs
+                model=self.model_name,
+                messages=messages,  # type: ignore[arg-type]
+                temperature=temperature if temperature is not None else self.config.temperature,
+                max_tokens=max_tokens if max_tokens is not None else self.config.max_tokens,
+                **kwargs,
+            )
+        except Exception:
+            logger.warning(
+                "llm.complete.error",
+                extra={**self._log_context(), "duration_ms": self._duration_ms(started_at)},
+            )
+            raise
+        logger.info(
+            "llm.complete",
+            extra={**self._log_context(), "duration_ms": self._duration_ms(started_at)},
         )
         return response.choices[0].message.content or ""
 
@@ -61,18 +77,40 @@ class LLMClient:
         max_tokens: Optional[int] = None,
         **kwargs: Any,
     ) -> AsyncIterable[str]:
-        stream = await self.client.chat.completions.create(  # type: ignore[call-overload]  # ORM Column config attrs
-            model=self.model_name,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=temperature if temperature is not None else self.config.temperature,
-            max_tokens=max_tokens if max_tokens is not None else self.config.max_tokens,
-            stream=True,
-            **kwargs,
+        started_at = time.perf_counter()
+        chunk_count = 0
+        try:
+            stream = await self.client.chat.completions.create(  # type: ignore[call-overload]  # ORM Column config attrs
+                model=self.model_name,
+                messages=messages,  # type: ignore[arg-type]
+                temperature=temperature if temperature is not None else self.config.temperature,
+                max_tokens=max_tokens if max_tokens is not None else self.config.max_tokens,
+                stream=True,
+                **kwargs,
+            )
+            async for chunk in stream:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    chunk_count += 1
+                    yield delta
+        except Exception:
+            logger.warning(
+                "llm.stream.error",
+                extra={
+                    **self._log_context(),
+                    "duration_ms": self._duration_ms(started_at),
+                    "chunk_count": chunk_count,
+                },
+            )
+            raise
+        logger.info(
+            "llm.stream",
+            extra={
+                **self._log_context(),
+                "duration_ms": self._duration_ms(started_at),
+                "chunk_count": chunk_count,
+            },
         )
-        async for chunk in stream:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                yield delta
 
     async def check_availability(self) -> bool:
         try:
@@ -89,3 +127,15 @@ class LLMClient:
     @property
     def provider(self) -> str:
         return self.config.provider  # type: ignore[return-value]  # ORM Column[str]
+
+    def _log_context(self) -> dict[str, Any]:
+        return {
+            "model_config_id": self.config.id,
+            "provider": self.provider,
+            "model": self.model_name,
+            "operation": "chat.completions",
+        }
+
+    @staticmethod
+    def _duration_ms(started_at: float) -> int:
+        return int((time.perf_counter() - started_at) * 1000)

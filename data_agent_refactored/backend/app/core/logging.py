@@ -8,6 +8,7 @@ machine-parseable by any log aggregator. Custom fields are passed via the
 import json
 import logging
 import sys
+from hashlib import sha256
 from typing import Any
 
 # Standard LogRecord attributes that must not be treated as structured fields.
@@ -55,6 +56,20 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             payload["exc"] = self.formatException(record.exc_info)
         return json.dumps(payload, ensure_ascii=False, default=str)
+
+
+def audit_hash(value: str | None, *, length: int = 16) -> str:
+    """Return a stable short hash for sensitive audit fields."""
+    digest = sha256((value or "").encode("utf-8")).hexdigest()
+    return digest[: max(length, 0)]
+
+
+def audit_preview(value: str | None, *, limit: int = 160) -> str:
+    """Collapse whitespace and cap text previews for logs."""
+    if not value:
+        return ""
+    compact = " ".join(value.split())
+    return compact[: max(limit, 0)]
 
 
 def setup_logging(level: str = "INFO") -> None:

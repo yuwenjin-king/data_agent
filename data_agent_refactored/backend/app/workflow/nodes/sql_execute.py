@@ -6,6 +6,7 @@ from langchain_core.runnables import RunnableConfig
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.logging import audit_hash, audit_preview
 from app.workflow.llm.client import LLMClient
 from app.workflow.prompts.loader import PromptLoader
 from app.workflow.sql.executor import SqlExecutionError, execute_read_only_sql
@@ -29,6 +30,8 @@ async def sql_execute_node(
 
     sql = state.get("sql_generate_output", "")
     agent_id = state.get("agent_id")
+    session_id = state.get("session_id")
+    thread_id = state.get("thread_id")
     dialect = state.get("db_dialect_type", "mysql")
 
     if not sql or not sql.strip():
@@ -46,6 +49,17 @@ async def sql_execute_node(
         return {"error": "Failed to build datasource URL"}
 
     dialect = map_dialect_to_sql_dialect(datasource_type) if datasource_type else dialect
+    log_context = {
+        "agent_id": agent_id,
+        "session_id": session_id,
+        "thread_id": thread_id,
+        "node": "sql_execute",
+        "plan_step": state.get("plan_current_step"),
+        "datasource_id": agent_datasource.datasource_id,
+        "dialect": dialect,
+        "sql_hash": audit_hash(sql),
+        "sql_preview": audit_preview(sql),
+    }
 
     try:
         result = execute_read_only_sql(
@@ -56,18 +70,21 @@ async def sql_execute_node(
             max_rows=settings.MAX_SQL_ROWS,
         )
     except SqlExecutionError as exc:
-        logger.warning("sql.error", extra={"agent_id": agent_id, "reason": str(exc)})
+        logger.warning("sql.error", extra={**log_context, "reason": str(exc)})
         return {
             "sql_regenerate_reason": SqlRetryReason(kind="sql_execute", reason=str(exc)),
             "sql_execute_node_output": {"error": str(exc)},
         }
 
+    elapsed_seconds = result.get("elapsed_seconds")
+    duration_ms = int(float(elapsed_seconds or 0) * 1000)
     logger.info(
         "sql.execute",
         extra={
-            "agent_id": agent_id,
+            **log_context,
             "row_count": result.get("row_count"),
-            "elapsed_seconds": result.get("elapsed_seconds"),
+            "elapsed_seconds": elapsed_seconds,
+            "duration_ms": duration_ms,
             "truncated": result.get("truncated"),
         },
     )

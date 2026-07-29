@@ -4,7 +4,7 @@ import json
 import logging
 import sys
 
-from app.core.logging import JsonFormatter, setup_logging
+from app.core.logging import JsonFormatter, audit_hash, audit_preview, setup_logging
 
 
 def test_json_formatter_emits_structured_fields():
@@ -51,6 +51,49 @@ def test_extra_fields_surface_in_captured_records(caplog):
     # And the JSON rendering surfaces them too.
     payload = json.loads(JsonFormatter().format(record))
     assert payload["row_count"] == 5
+
+
+def test_audit_hash_returns_stable_short_digest():
+    assert audit_hash("SELECT * FROM orders") == audit_hash("SELECT * FROM orders")
+    assert audit_hash("SELECT * FROM orders") != audit_hash("SELECT * FROM users")
+    assert len(audit_hash("SELECT * FROM orders")) == 16
+    assert audit_hash("value", length=8) == audit_hash("value")[:8]
+
+
+def test_audit_preview_collapses_and_limits_text():
+    sql = """
+        SELECT *
+        FROM orders
+        WHERE status = 'paid'
+    """
+
+    assert audit_preview(sql) == "SELECT * FROM orders WHERE status = 'paid'"
+    assert audit_preview(sql, limit=15) == "SELECT * FROM o"
+    assert audit_preview(None) == ""
+
+
+def test_json_formatter_emits_audit_context_fields():
+    record = logging.LogRecord(
+        name="app.workflow.sql_execute",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg="sql.execute",
+        args=None,
+        exc_info=None,
+    )
+    record.agent_id = 7
+    record.thread_id = "thread-1"
+    record.node = "sql_execute"
+    record.sql_hash = audit_hash("select 1")
+    record.duration_ms = 12
+    payload = json.loads(JsonFormatter().format(record))
+
+    assert payload["agent_id"] == 7
+    assert payload["thread_id"] == "thread-1"
+    assert payload["node"] == "sql_execute"
+    assert payload["sql_hash"] == audit_hash("select 1")
+    assert payload["duration_ms"] == 12
 
 
 def test_setup_logging_configures_root():
