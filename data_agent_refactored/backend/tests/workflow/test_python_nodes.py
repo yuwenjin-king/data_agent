@@ -2,6 +2,8 @@
 AST guard, the python_execute router, and the python node no-LLM fallbacks."""
 
 import json
+import subprocess
+from unittest.mock import patch
 
 import pytest
 from langgraph.graph import END
@@ -9,6 +11,7 @@ from langgraph.graph import END
 from app.core.config import settings
 from app.workflow.code.executor import (
     CodeSecurityError,
+    DockerCodePoolExecutor,
     LocalCodePoolExecutor,
     scan_forbidden_imports,
 )
@@ -38,6 +41,47 @@ def test_local_executor_timeout():
     result = LocalCodePoolExecutor().run("while True:\n    pass", "[]", 1000)
     assert not result.success
     assert "超时" in result.exception
+
+
+def test_docker_executor_runs_with_isolation_flags():
+    completed = subprocess.CompletedProcess(
+        args=["docker"],
+        returncode=0,
+        stdout='{"ok": true}\n',
+        stderr="",
+    )
+    with patch("app.workflow.code.executor.subprocess.run", return_value=completed) as run:
+        result = DockerCodePoolExecutor().run("print('ok')", "[]", 5000)
+
+    assert result.success
+    assert result.stdout == '{"ok": true}\n'
+    cmd = run.call_args.args[0]
+    assert cmd[:4] == ["docker", "run", "--rm", "-i"]
+    assert "--network" in cmd
+    assert "none" in cmd
+    assert "--read-only" in cmd
+    assert "--cap-drop" in cmd
+    assert "ALL" in cmd
+    assert "--security-opt" in cmd
+    assert "no-new-privileges" in cmd
+    assert "--user" in cmd
+    assert "65534:65534" in cmd
+    assert "-e" in cmd
+    assert "PYTHONDONTWRITEBYTECODE=1" in cmd
+    assert settings.DOCKER_IMAGE in cmd
+    assert run.call_args.kwargs["input"] == "[]"
+    assert set(run.call_args.kwargs["env"]) == {"PATH"}
+
+
+def test_docker_executor_does_not_require_docker_for_missing_binary():
+    with patch(
+        "app.workflow.code.executor.subprocess.run",
+        side_effect=FileNotFoundError,
+    ):
+        result = DockerCodePoolExecutor().run("print('ok')", "[]", 1000)
+
+    assert not result.success
+    assert "Docker executable not found" in result.exception
 
 
 def test_ast_guard_rejects_forbidden_imports():

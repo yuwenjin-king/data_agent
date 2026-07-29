@@ -2,8 +2,8 @@
 
 MVP local runner: a subprocess with an AST import guard, a secret-scrubbed
 environment, POSIX resource limits (CPU/address-space/nproc), a hard timeout,
-and a stdout cap. This is NOT a full sandbox — for production isolation use
-the Docker executor (CODE_EXECUTOR_TYPE=docker, currently a stub) or nsjail.
+and a stdout cap. The Docker runner executes the same script in an isolated
+container with no network, read-only mounts, and CPU/memory/pid limits.
 """
 
 import ast
@@ -132,10 +132,74 @@ class LocalCodePoolExecutor:
 
 
 class DockerCodePoolExecutor:
-    """Placeholder; real Docker isolation is deferred (Phase C)."""
+    """Runs generated Python in an isolated Docker container."""
 
-    def run(self, code: str, stdin: str, timeout_ms: int) -> CodeResult:  # pragma: no cover
-        raise NotImplementedError("Docker 代码执行器尚未接入；请设置 CODE_EXECUTOR_TYPE=local。")
+    def run(self, code: str, stdin: str, timeout_ms: int) -> CodeResult:
+        scan_forbidden_imports(code)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script_path = os.path.join(tmpdir, "script.py")
+            with open(script_path, "w", encoding="utf-8") as fh:
+                fh.write(code)
+            os.chmod(tmpdir, 0o755)
+            os.chmod(script_path, 0o644)
+            cmd = [
+                "docker",
+                "run",
+                "--rm",
+                "-i",
+                "--network",
+                "none",
+                "--memory",
+                f"{settings.CODE_MAX_MEMORY_MB}m",
+                "--cpus",
+                "1",
+                "--pids-limit",
+                "64",
+                "--read-only",
+                "--cap-drop",
+                "ALL",
+                "--security-opt",
+                "no-new-privileges",
+                "--user",
+                "65534:65534",
+                "-e",
+                "PYTHONDONTWRITEBYTECODE=1",
+                "--tmpfs",
+                "/tmp:rw,noexec,nosuid,size=64m",
+                "-v",
+                f"{tmpdir}:/sandbox:ro",
+                "-w",
+                "/sandbox",
+                settings.DOCKER_IMAGE,
+                "python",
+                "-I",
+                "/sandbox/script.py",
+            ]
+            try:
+                proc = subprocess.run(
+                    cmd,
+                    input=stdin,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout_ms / 1000,
+                    env={"PATH": os.environ.get("PATH", "")},
+                )
+            except FileNotFoundError:
+                return CodeResult(success=False, exception="Docker executable not found")
+            except subprocess.TimeoutExpired:
+                return CodeResult(success=False, exception="代码执行超时")
+
+            stdout = proc.stdout or ""
+            if len(stdout.encode("utf-8", "ignore")) > MAX_STDOUT_BYTES:
+                stdout = stdout[:MAX_STDOUT_BYTES] + "\n...[stdout truncated]"
+            if proc.returncode == 0:
+                return CodeResult(success=True, stdout=stdout, stderr=proc.stderr or "")
+            return CodeResult(
+                success=False,
+                stdout=stdout,
+                stderr=proc.stderr or "",
+                exception=f"Docker 进程退出码 {proc.returncode}",
+            )
 
 
 def get_code_executor():
