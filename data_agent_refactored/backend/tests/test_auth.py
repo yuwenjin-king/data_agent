@@ -38,6 +38,7 @@ def test_management_route_blocks_without_token_when_enabled(client, db_session, 
 
 def test_login_and_authenticated_access(client, db_session, monkeypatch):
     monkeypatch.setattr(settings, "AUTH_ENABLED", True)
+    monkeypatch.setattr(settings, "JWT_SECRET_KEY", "test-jwt-secret")
     _make_user(db_session)
 
     # No token → 401.
@@ -73,6 +74,7 @@ def test_completions_blocks_without_credentials_when_enabled(client, db_session,
 
 def test_completions_accepts_login_token_when_enabled(client, db_session, monkeypatch):
     monkeypatch.setattr(settings, "AUTH_ENABLED", True)
+    monkeypatch.setattr(settings, "JWT_SECRET_KEY", "test-jwt-secret")
     _make_user(db_session)
     login = client.post("/api/v1/auth/login", data={"username": "testadmin", "password": "secret"})
     token = login.json()["access_token"]
