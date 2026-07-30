@@ -6,6 +6,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import AgentDetail from '../pages/AgentDetail'
 import { agentService, datasourceService, knowledgeService } from '../services'
 
+const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true }
+
 vi.mock('../services', () => ({
   agentService: {
     getById: vi.fn(),
@@ -96,7 +98,7 @@ describe('AgentDetail', () => {
   it('initializes selected datasource tables for schema recall', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter initialEntries={['/agents/1']}>
+      <MemoryRouter initialEntries={['/agents/1']} future={routerFuture}>
         <Routes>
           <Route path="/agents/:id" element={<AgentDetail />} />
         </Routes>
@@ -118,7 +120,7 @@ describe('AgentDetail', () => {
   it('creates semantic models from the semantic tab', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter initialEntries={['/agents/1']}>
+      <MemoryRouter initialEntries={['/agents/1']} future={routerFuture}>
         <Routes>
           <Route path="/agents/:id" element={<AgentDetail />} />
         </Routes>
@@ -148,7 +150,7 @@ describe('AgentDetail', () => {
   it('toggles agent knowledge recall', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter initialEntries={['/agents/1']}>
+      <MemoryRouter initialEntries={['/agents/1']} future={routerFuture}>
         <Routes>
           <Route path="/agents/:id" element={<AgentDetail />} />
         </Routes>
@@ -165,7 +167,7 @@ describe('AgentDetail', () => {
   it('retries failed agent knowledge indexing', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter initialEntries={['/agents/1']}>
+      <MemoryRouter initialEntries={['/agents/1']} future={routerFuture}>
         <Routes>
           <Route path="/agents/:id" element={<AgentDetail />} />
         </Routes>
@@ -183,7 +185,7 @@ describe('AgentDetail', () => {
   it('creates preset questions', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter initialEntries={['/agents/1']}>
+      <MemoryRouter initialEntries={['/agents/1']} future={routerFuture}>
         <Routes>
           <Route path="/agents/:id" element={<AgentDetail />} />
         </Routes>

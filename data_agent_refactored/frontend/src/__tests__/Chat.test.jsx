@@ -5,6 +5,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Chat from '../pages/Chat'
 import { agentService, chatService } from '../services'
 
+const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true }
+
 vi.mock('../services', () => ({
   agentService: {
     getById: vi.fn(),
@@ -48,7 +50,10 @@ describe('Chat', () => {
 
   it('renders workflow artifacts from persisted assistant metadata', async () => {
     render(
-      <MemoryRouter initialEntries={['/chat/1']}>
+      <MemoryRouter
+        initialEntries={['/chat/1']}
+        future={routerFuture}
+      >
         <Routes>
           <Route path="/chat/:agentId" element={<Chat />} />
         </Routes>

@@ -4,10 +4,12 @@ import { MemoryRouter } from 'react-router-dom'
 
 import Login from '../pages/Login'
 
+const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true }
+
 describe('Login', () => {
   it('renders the login form with username/password fields and a submit button', () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={routerFuture}>
         <Login />
       </MemoryRouter>,
     )
