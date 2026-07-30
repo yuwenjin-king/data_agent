@@ -204,13 +204,19 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
     def import_excel(
         self, db: Session, *, agent_id: int, upload_file: UploadFile
     ) -> BatchImportResult:
-        import pandas as pd
-
         if safe_ext(upload_file.filename) != ".xlsx":
             raise ValueError("Excel import requires an .xlsx file")
+        from openpyxl import load_workbook
+
         content = read_with_size_limit(upload_file)
-        df = pd.read_excel(io.BytesIO(content))
-        df.columns = [str(c).strip().lower().replace("*", "") for c in df.columns]
+        workbook = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+        sheet = workbook.active
+        rows = list(sheet.iter_rows(values_only=True))
+        workbook.close()
+        if not rows:
+            return BatchImportResult(total=0, success_count=0, fail_count=0, errors=[])
+
+        headers = [str(c).strip().lower().replace("*", "") if c is not None else "" for c in rows[0]]
         column_map = {
             "表名": "table_name",
             "tablename": "table_name",
@@ -229,16 +235,21 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
             "columncomment": "column_comment",
             "创建时间": "create_time",
         }
-        df = df.rename(columns=column_map)
+        normalized_headers = [column_map.get(header, header) for header in headers]
 
         required = ["table_name", "column_name", "business_name", "data_type"]
         errors = []
         items = []
-        for idx, row in df.iterrows():
-            row_dict = row.where(pd.notnull(row), None).to_dict()
+        data_rows = rows[1:]
+        for idx, row in enumerate(data_rows, start=2):
+            row_dict = {
+                header: value
+                for header, value in zip(normalized_headers, row)
+                if header
+            }
             missing = [c for c in required if not row_dict.get(c)]
             if missing:
-                errors.append(f"Row {idx + 2}: missing {missing}")
+                errors.append(f"Row {idx}: missing {missing}")
                 continue
             items.append(
                 SemanticModelBatchImportItem(
@@ -253,9 +264,10 @@ class CRUDSemanticModel(CRUDBase[SemanticModel, SemanticModelCreate, SemanticMod
             )
         if not items:
             return BatchImportResult(
-                total=len(df), success_count=0, fail_count=len(errors), errors=errors
+                total=len(data_rows), success_count=0, fail_count=len(errors), errors=errors
             )
         result = self.batch_import(db, agent_id=agent_id, items=items)
+        result.total = len(data_rows)
         result.errors.extend(errors)
         result.fail_count += len(errors)
         return result
