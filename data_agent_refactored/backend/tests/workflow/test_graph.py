@@ -98,6 +98,8 @@ def _mock_llm_client(responses: dict) -> LLMClient:
         prompt = messages[0]["content"]
         for keyword, response in responses.items():
             if keyword in prompt:
+                if isinstance(response, Exception):
+                    raise response
                 return response
         return ""
 
@@ -190,6 +192,77 @@ async def test_nl2sql_graph_with_sqlite_agent_db(db_session):
     assert "2" in final_state["result"] or "用户" in final_state["result"]
 
     # Cleanup
+    os.remove(sqlite_path)
+
+
+@pytest.mark.asyncio
+async def test_planner_fallback_empty_sql_instruction_still_runs_sql(db_session):
+    from app.models.agent import Agent
+    from app.models.datasource import AgentDatasource, Datasource
+
+    agent = Agent(name="fallback-agent", status="published")
+    db_session.add(agent)
+    db_session.flush()
+
+    sqlite_path = f"/tmp/test_agent_planner_fallback_{uuid.uuid4().hex}.db"
+    engine = create_engine(f"sqlite:///{sqlite_path}")
+    with engine.connect() as conn:
+        conn.execute(text("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)"))
+        conn.execute(text("INSERT INTO users (name) VALUES ('Alice'), ('Bob')"))
+        conn.commit()
+    engine.dispose()
+
+    datasource = Datasource(
+        name="fallback-sqlite",
+        type="sqlite",
+        host="localhost",
+        port=0,
+        database_name="test",
+        username="test",
+        password=encrypt("test"),
+        connection_url=f"sqlite:///{sqlite_path}",
+        status="active",
+    )
+    db_session.add(datasource)
+    db_session.flush()
+
+    db_session.add(AgentDatasource(agent_id=agent.id, datasource_id=datasource.id, is_active=True))
+    db_session.commit()
+
+    responses = {
+        "意图分类": '{"classification": "data_analysis"}',
+        "查询澄清与规范化": '{"canonical_query": "查询 users 表中的用户数量", "expanded_queries": []}',
+        "需求可行性": (
+            "【需求类型】：《数据分析》\n【语种类型】：《中文》\n"
+            "【需求内容】：查询 users 表中的用户数量"
+        ),
+        "执行计划编排": RuntimeError("planner failed"),
+        "语义一致性校验": "通过",
+        "SQL 编写约束": "SELECT COUNT(*) AS cnt FROM users",
+        "报告结构建议": "共有 2 位用户。",
+    }
+
+    graph = build_workflow_graph()
+    final_state = None
+    async for chunk in graph.astream(
+        {"agent_id": agent.id, "input": "有多少用户"},
+        config={
+            "configurable": {
+                "llm_client": _mock_llm_client(responses),
+                "embedding_client": EmbeddingClient.dummy(),
+                "vector_store": _make_vector_store(datasource.id),
+                "db": db_session,
+            }
+        },
+        stream_mode="updates",
+    ):
+        for node_name, update in chunk.items():
+            if node_name == "report_generator":
+                final_state = update
+
+    assert final_state is not None
+    assert "2" in final_state["result"] or "用户" in final_state["result"]
+
     os.remove(sqlite_path)
 
 

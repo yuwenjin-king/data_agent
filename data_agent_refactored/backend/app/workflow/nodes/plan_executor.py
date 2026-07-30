@@ -47,7 +47,7 @@ async def plan_executor_node(
                 return _validation_failed(
                     state, f"第 {step.step} 步 report_generator 缺少 summary_and_recommendations"
                 )
-        else:  # sql_generate / python_generate
+        if tool == "python_generate":
             if not (params.instruction or "").strip():
                 return _validation_failed(state, f"第 {step.step} 步 {tool} 缺少 instruction")
 

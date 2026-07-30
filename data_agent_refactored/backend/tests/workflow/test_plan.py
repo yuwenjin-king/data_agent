@@ -70,9 +70,19 @@ async def test_plan_executor_exhausted_nl2sql_only_routes_to_END():
 
 
 @pytest.mark.asyncio
-async def test_plan_executor_rejects_missing_instruction_and_repairs():
+async def test_plan_executor_allows_empty_sql_instruction_for_nl2sql_fallback():
     plan = _plan_json(
         [{"step": 1, "tool_to_use": "sql_generate", "tool_parameters": {"instruction": ""}}]
+    )
+    out = await plan_executor_node({"planner_node_output": plan, "plan_repair_count": 0}, {})
+    assert out["plan_validation_status"] is True
+    assert out["plan_next_node"] == "sql_generate"
+
+
+@pytest.mark.asyncio
+async def test_plan_executor_rejects_missing_python_instruction_and_repairs():
+    plan = _plan_json(
+        [{"step": 1, "tool_to_use": "python_generate", "tool_parameters": {"instruction": ""}}]
     )
     out = await plan_executor_node({"planner_node_output": plan, "plan_repair_count": 0}, {})
     assert out["plan_validation_status"] is False
